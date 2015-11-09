@@ -1,1 +1,18 @@
 /.project
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+# compiled files
+*.so
+*.a
+masterd/masterd
+
+# config and pid files
+*.prf
+*.pid
