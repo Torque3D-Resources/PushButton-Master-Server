@@ -77,7 +77,7 @@ bool handleListRequest(tMessageSession &msg)
 	***********************************/
 	index = msg.pack->readU8();
 
-	if(gm_pConfig->verbosity > 3)
+	if(checkLogLevel(DPRINT_VERBOSE))
 	{
 		if(index == 0xFF)
 			printf("Received list query request from %s:%hu\n", msg.addr->toString(str), msg.addr->port);
@@ -85,6 +85,9 @@ bool handleListRequest(tMessageSession &msg)
 			printf("Received list resend request from %s:%hu\n", msg.addr->toString(str), msg.addr->port);
 		printf(" [F: %X, S: %X, K: %u, I: %X]\n", msg.header->flags, msg.header->session, msg.header->key, index);
 	}
+
+//	printf(" dumping request packet..\n");
+//	debugPrintHexDump(msg.pack->getBufferPtr(), msg.pack->getBufferSize());
 
 	// don't waste our time parsing the rest of this resend request packet,
 	// go ahead and resend the specific packet now
@@ -97,6 +100,10 @@ bool handleListRequest(tMessageSession &msg)
 			// resend the requested list packet
 			msg.session = ps;
 			sendListResponse(msg, index);
+		} else
+		if(checkLogLevel(DPRINT_DEBUG))
+		{
+			printf(" No such session exists, ignoring resend request.\n");
 		}
 
 		// received packet OK
@@ -111,7 +118,23 @@ bool handleListRequest(tMessageSession &msg)
 
 	// go ahead and make sure the strings aren't garbage
 	if(!isPrintableString(filter.gameType) || !isPrintableString(filter.missionType))
-		return false; // strings are and packet is malformed
+	{
+		if(checkLogLevel(DPRINT_DEBUG))
+		{
+			printf(" Invalid query strings issued, ignoring query request.\n");
+			if(isPrintableString(filter.gameType))
+			{
+				printf(" gameType is invalid..\n");
+				debugPrintHexDump(filter.gameType, strlen(filter.gameType));
+			}
+			if(isPrintableString(filter.missionType))
+			{
+				printf(" missionType is invalid..\n");
+				debugPrintHexDump(filter.gameType, strlen(filter.missionType));
+			}
+		}
+		return false; // strings are garbage and packet is malformed
+	}
 
 	/***********************************
 	 Read miscellaneous properties
@@ -235,7 +258,23 @@ bool handleInfoResponse(tMessageSession &msg)
 
 	// go ahead and make sure the strings aren't garbage
 	if(!isPrintableString(info.gameType) || !isPrintableString(info.missionType))
-		return false; // strings are and packet is malformed
+	{
+		if(checkLogLevel(DPRINT_DEBUG))
+		{
+			printf(" Invalid response strings issued, ignoring info response.\n");
+			if(isPrintableString(info.gameType))
+			{
+				printf(" gameType is invalid..\n");
+				debugPrintHexDump(info.gameType, strlen(info.gameType));
+			}
+			if(isPrintableString(info.missionType))
+			{
+				printf(" missionType is invalid..\n");
+				debugPrintHexDump(info.gameType, strlen(info.missionType));
+			}
+		}
+		return false; // strings are garbage and packet is malformed
+	}
 
 	// check packet parser status
 	if(!msg.pack->getStatus())

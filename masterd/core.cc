@@ -119,6 +119,7 @@ void sigproc(int sig)
 void debugPrintf(const int level, const char *format, ...)
 {
 	va_list args;
+	static bool skipTS = false;
 
 	
 	// is global configuration pointer set?
@@ -127,12 +128,77 @@ void debugPrintf(const int level, const char *format, ...)
 		// yes, now filter for verbosity level
 		if(level > (int)gm_pConfig->verbosity)
 			return; // message level too high, abort
+
+		if(gm_pConfig->timestamp && !skipTS)
+		{
+			struct tm * ts;
+			time_t now;
+			size_t len;
+			
+			time(&now);
+			ts = localtime(&now);
+			
+			// [YYYY-MM-DD hh:mm:ss]
+			printf("[%04d-%02d-%02d %02d:%02d:%02d] ",
+				ts->tm_year + 1900, ts->tm_mon +1, ts->tm_mday,
+				ts->tm_hour, ts->tm_min, ts->tm_sec);
+			
+			// cheap hack to avoid printing a timestamp between same-line messages
+			if((len = strlen(format)) && (format[len -1] != '\n'))
+				skipTS = true;
+		} else
+			skipTS = false;
 	}
 
 	// allow the print output to go through
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
+}
+
+void debugPrintHexDump(const void *ptr, size_t size)
+{
+	const U8 *data = (const U8 *)ptr;
+	size_t i, k;
+
+	/*
+	 * going for hex dump output to fit within 80 char width terminal:
+	 * AAAA is 16bit address, hb is hex byte, and c is respective character.
+	 *
+	 * AAAA  hb hb hb hb hb hb hb hb hb hb hb hb hb hb hb hb  cccccccccccccccc
+	 */
+	
+	printf("Hex dump of %zu bytes:\n", size);
+	for(i=0; i<size;)
+	{
+		printf("%04zX  ", i);
+
+		for(k=0; k<16; k++)
+		{
+			if((i+k)<size)
+				printf("%02hhx ", data[k]);
+			else
+				printf("   ");
+		}
+
+		printf(" ");
+		
+		for(k=0; k<16; k++)
+		{
+			if(((i+k)<size) && (data[k] >= 0x20))
+				printf("%c", data[k]);
+			else
+				printf(" ");
+		}
+
+		// increment by 16 bytes
+		data += 16;
+		i += 16;
+
+		printf("\n");
+	}
+	
+	printf("\n");
 }
 
 char* strtrim(char *str)
@@ -328,6 +394,7 @@ void MasterdCore::RunThread(void)
 			if(!gm_pFloodControl->CheckPeer(*addr, &peerrec, true))
 			{
 				// bad reputation, ignore peer
+				debugPrintf(DPRINT_DEBUG, "Dropped packet from banned host %s:%hu\n", addr->toString(str), addr->port);
 				goto SkipPeerMsg;
 			}
 			
@@ -489,12 +556,17 @@ void MasterdCore::InitPrefs(void)
 		},
 		{	CONFIG_TYPE_U32,	&m_Prefs.verbosity,	"verbosity",
 			"Verbosity of log output. Default: 4\n"
-			"   0 - No Messages\n"
+			"   0 - No Messages (except initial startup messages)\n"
 			"   1 - Error Messages\n"
-			"   2 - Warning Messages*\n"
-			"   3 - Informative Messages*\n"
-			"   4 - All [miscellaneous] Messages*!\n\n"
-			"* Indicates it includes all the message types above it.\n"
+			"   2 - Warning Messages\n"
+			"   3 - Informative Messages\n"
+			"   4 - Verbose [miscellaneous] Messages\n"
+			"   5 - Debug Messages (warning: message flood) \n\n"
+			" The chosen message output level will include all those above it.\n"
+		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.timestamp,	"timestamp",
+			"Enable prefixing timestamps to messages. Set to 0 (zero) to not timestamp.\n"
+			"Default: 1 (Enable)"
 		},
 
 		{	CONFIG_SECTION,		NULL,	NULL,
@@ -555,6 +627,7 @@ void MasterdCore::InitPrefs(void)
 	m_Prefs.port				= 28002;		// set bind UDP port to standard
 	m_Prefs.heartbeat			= 180;			// set heartbeat to 3 minutes
 	m_Prefs.verbosity			= 4;			// set verbosity to All Messages
+	m_Prefs.timestamp			= 1;			// enable timestamped messages
 	m_Prefs.floodResetTime		= 60;			// reset peer ticket count every 60 seconds
 	m_Prefs.floodForgetTime		= 900;			// forget/delete peer record after 15 minutes
 	m_Prefs.floodBanTime		= 600;			// peer is banned for 10 minutes once reaching max tickets
@@ -700,8 +773,8 @@ SkipToNext:
 		m_Prefs.port = 28002;
 	if(m_Prefs.heartbeat > 3600)	// hearbeat timeout should stay under an hour
 		m_Prefs.heartbeat = 3600;
-	if(m_Prefs.verbosity > DPRINT_LEVELCOUNT -1) // we only have so many verbosity levels
-		m_Prefs.verbosity = DPRINT_LEVELCOUNT -1;
+	if(m_Prefs.verbosity >= DPRINT__COUNT) // we only have so many verbosity levels
+		m_Prefs.verbosity = DPRINT__COUNT -1;
 
 	// report success
 	debugPrintf(DPRINT_INFO, " - Preference file loaded.\n");

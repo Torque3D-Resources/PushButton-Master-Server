@@ -91,13 +91,14 @@ extern MasterdTransport *gm_pTransport;
 
 enum
 {
-	DPRINT_DEBUG = 0,
-	DPRINT_ERROR,			// Level 0
-	DPRINT_WARN,			// Level 1
-	DPRINT_INFO,			// Level 2
-	DPRINT_VERBOSE,			// Level 3
+	DPRINT_NONE = 0,
+	DPRINT_ERROR,			// Level 1
+	DPRINT_WARN,			// Level 2
+	DPRINT_INFO,			// Level 3
+	DPRINT_VERBOSE,			// Level 4
+	DPRINT_DEBUG,			// Level 5
 
-	DPRINT_LEVELCOUNT
+	DPRINT__COUNT			// number of valid print levels, not a valid option
 };
 
 struct tDaemonConfig
@@ -110,6 +111,7 @@ struct tDaemonConfig
 	U32		port;				// local UDP listening port number to bind to
 	U32		heartbeat;			// amount of time without heartbeat response before server is delisted
 	U32		verbosity;			// verbosity logging level
+	U32		timestamp;			// prefix timestamp to messages when not zero
 
 	// flood control settings
 	U32		floodResetTime;		// reset ticket count every X seconds
@@ -173,7 +175,16 @@ public:
 // global source member, daemon configuration structure
 extern tDaemonConfig	*gm_pConfig;
 
-extern void debugPrintf(const int level, const char *format, ...);
+extern void debugPrintf(int level, const char *format, ...);
+static inline bool checkLogLevel(int level)
+{
+	if(gm_pConfig && (level > (int)gm_pConfig->verbosity))
+		return false; // message level too high
+
+	// message level is OK to log
+	return true;
+}
+extern void debugPrintHexDump(const void *ptr, size_t size);
 
 
 #endif // _MASTERD_H_

@@ -36,6 +36,14 @@
 
 #include "ServerStoreRAM.h"
 
+
+// Enables extensive debugging of query filtering of game servers in ServerStoreRAM::QueryServers().
+// Should not be used for production, to be sure we also check for NDEBUG to avoid enabling on release builds.
+#ifndef NDEBUG
+#	define DEBUG_FILTER
+#endif // !NDEBUG
+
+
 /**
  * @brief Initialize server db to use filename.
  *
@@ -129,6 +137,8 @@ void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 
 	debugPrintf(DPRINT_VERBOSE, "New Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
 				addr->toString(str), addr->port, info->gameType, info->missionType);
+	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %lu, regions 0x%08lu\n",
+				info->playerCount, info->numBots, info->maxPlayers, info->CPUSpeed, info->version, info->regions);
 	
 	// give back the old string references to the stack serverinfo
 	info->gameType		= oldGame;
@@ -149,6 +159,8 @@ void ServerStoreRAM::RemoveServer(tcServerMap::iterator &it)
 	
 	debugPrintf(DPRINT_VERBOSE, "Remove Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
 				info->addr.toString(str), info->addr.port, info->gameType, info->missionType);
+	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %lu, regions 0x%08lu\n",
+				info->playerCount, info->numBots, info->maxPlayers, info->CPUSpeed, info->version,info->regions);
 	
 	// notify game and mission types manager
 	m_GameTypes.PopRef(info->gameType);
@@ -284,6 +296,8 @@ void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 
 	debugPrintf(DPRINT_VERBOSE, "Updated Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
 				addr->toString(str), addr->port, rec->gameType, rec->missionType);
+	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %lu, regions 0x%08lu\n",
+				rec->playerCount, rec->numBots, rec->maxPlayers, rec->CPUSpeed, rec->version, rec->regions);
 	
 	// done
 }
@@ -293,13 +307,18 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 	tcServerMap::iterator	it;
 	ServerInfo				*info;
 	tServerAddress			addr;
-	char					*game = NULL, *mission = NULL;
+	char					*game = NULL, *mission = NULL, str[16];
 	bool					buddyFound;
 	U32						i, n;
+#ifdef DEBUG_FILTER
+	size_t					current = 0;
+#endif // DEBUG_FILTER
 
 
 	debugPrintf(DPRINT_VERBOSE, "Query for Game:\"%s\", Mission:\"%s\"\n",
 				filter->gameType, filter->missionType);
+	debugPrintf(DPRINT_DEBUG, " Players Min/Max(Bots) %hhu/%hhu(%hhu), CPU >= %hu MHz, Version >= %lu, Regions 0x%08lu, Flags 0x%08lu\n",
+				filter->minPlayers, filter->maxPlayers, filter->maxBots, filter->minCPUSpeed, filter->version, filter->regions, filter->filterFlags);
 
 	// special handling of game and mission types
 	if(filter->gameType && strlen(filter->gameType))
@@ -312,7 +331,10 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 
 			// was game type found?
 			if(!game)
+			{
+				debugPrintf(DPRINT_DEBUG, " Aborting query, no matching servers for Game filter.\n");
 				goto SkipFilterTests; // no match found, no servers will satify filter
+			}
 		}
 	}
 	if(filter->missionType && strlen(filter->missionType))
@@ -325,7 +347,10 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 
 			// was mission type found?
 			if(!mission)
+			{
+				debugPrintf(DPRINT_DEBUG, " Aborting query, no matching servers for Mission filter.\n");
 				goto SkipFilterTests; // no match found, no servers will satify filter
+			}
 		}
 	}
 	
@@ -335,41 +360,93 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 		// get server record
 		info = &it->second;
 
+#ifdef DEBUG_FILTER
+		debugPrintf(DPRINT_DEBUG, " FilterCheck(%zu/%zu) Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
+					++current, m_Servers.size(), info->addr.toString(str), info->addr.port, info->gameType, info->missionType);
+#endif // DEBUG_FILTER
+		
 		// check the game type
 		if(game && (game != info->gameType))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Game mismatch.\n");
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check the mission type
 		if(mission && (mission != info->missionType))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Mission mismatch.\n");
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check minimum player count
 		if(filter->minPlayers && (info->playerCount < filter->minPlayers))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Min players, %hhu < %hhu.\n", info->playerCount, filter->minPlayers);
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check maximum player count
 		if(filter->maxPlayers && (info->playerCount > filter->maxPlayers))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Max players, %hhu > %hhu.\n", info->playerCount, filter->maxPlayers);
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check regions mask
 		if(filter->regions && !(info->regions & filter->regions))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Regions mask, 0x%08lu & 0x%08lu = 0x%08lu.\n",
+						info->regions, filter->regions, info->regions & filter->regions);
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check minimum version
 		if(filter->version && (info->version < filter->version))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Min version, %hhu < %hhu.\n", info->version, filter->version);
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check information bit flag mask
 		if(filter->filterFlags && !(info->infoFlags & filter->filterFlags))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Flags mask, 0x%08lu & 0x%08lu = 0x%08lu.\n",
+						info->infoFlags, filter->filterFlags, info->infoFlags & filter->filterFlags);
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check maximum bot count
 		if(filter->maxBots && (info->numBots > filter->maxBots))
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Max bots, %hhu > %hhu.\n", info->numBots, filter->maxBots);
+#endif // DEBUG_FILTER
 			continue; // skip
+		}
 
 		// check minimum processor speed
 		if(filter->minCPUSpeed && (info->CPUSpeed < filter->minCPUSpeed))
-			continue;
+		{
+#ifdef DEBUG_FILTER
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Min CPU, %hu < %hu.\n", info->CPUSpeed, filter->minCPUSpeed);
+#endif // DEBUG_FILTER
+			continue; // skip
+		}
 
 		// this part we check on our buddies, but I don't know if we're suppose
 		// to exclude servers of which client's buddies aren't on them just like
@@ -399,7 +476,12 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 
 			// was any of the client's buddies on this server
 			if(!buddyFound)
+			{
+#ifdef DEBUG_FILTER
+				debugPrintf(DPRINT_DEBUG, "  Filter fault: no buddies match.\n");
+#endif // DEBUG_FILTER
 				continue; // nope, skip
+			}
 		}
 
 
