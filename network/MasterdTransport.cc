@@ -73,11 +73,6 @@ MasterdTransport::~MasterdTransport()
 }
 
 
-bool MasterdTransport::GetStatus(void)
-{
-	return sockOK;
-}
-
 /**
  * @brief Poll for packets.
  *
@@ -120,7 +115,7 @@ bool MasterdTransport::poll(Packet **data, ServerAddress **from, int timeout)
 			(len=this->sock->recvfrom(buff, 2500, 0, &from_x))
 			> 0)
 		{
-			*from = new ServerAddress(from_x.getHost(), from_x.getPort());
+			*from = new ServerAddress(&from_x);
 			*data = new Packet(buff, len);
 
 			return true;
@@ -140,14 +135,9 @@ bool MasterdTransport::poll(Packet **data, ServerAddress **from, int timeout)
  * @param	data	Packet containing data to send.
  * @param	to		Address to which to send this data.
  */
-void MasterdTransport::sendPacket(Packet * data, ServerAddress * to)
+void MasterdTransport::sendPacket(Packet *data, ServerAddress *to)
 {
-//	char * buff = data->getBuffer();
-	netAddress *a = new netAddress();
-	to->putInto(a);
-//	this->sock->sendto(buff, (int)data->getLength(), 0, a);
-	this->sock->sendto(data->getBufferPtr(), (int)data->getLength(), 0, a);
-	delete a;
-//	delete buff;
+	netAddress naddr(to->address, to->port);
+	this->sock->sendto(data->getBufferPtr(), (int)data->getLength(), 0, &naddr);
 }
 

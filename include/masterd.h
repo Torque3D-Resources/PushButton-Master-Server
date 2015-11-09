@@ -100,7 +100,7 @@ enum
 	DPRINT_LEVELCOUNT
 };
 
-typedef struct tDaemonConfig
+struct tDaemonConfig
 {
 	char	file[256];			// path and name of preferences file
 	char	pidfile[256];		// path and name of process id file
@@ -117,7 +117,7 @@ typedef struct tDaemonConfig
 	U32		floodBanTime;		// peer is banned for X seconds once reaching max tickets
 	U32		floodMaxTickets;	// ban peer once reaching X tickets
 	U32		floodBadMsgTicket;	// number of X tickets for receiving bad messages from peer
-} tDaemonConfig;
+};
 
 //=============================================================================
 // Revised Masterd Core --TRON
@@ -132,13 +132,13 @@ enum eConfigEntityType
 	CONFIG_SECTION = 100		// config document section
 };
 
-typedef struct tConfigEntity
+struct tConfigEntity
 {
 	enum eConfigEntityType		type;	// entity storage type
 	void						*pData;	// pointer to storage
 	const char					*pName;	// entity name
 	const char					*pDesc;	// pointer to description
-} tConfigEntity;
+};
 
 class MasterdCore
 {

@@ -35,7 +35,7 @@ using namespace std;
 #if !defined(WIN32) && defined(__GNUC__)
 	#include <signal.h>
 	#include <sys/types.h>
-        #include <unistd.h>
+	#include <unistd.h>
 	#define stricmp strcasecmp
 	#define strnicmp strncasecmp
 #endif
@@ -192,7 +192,7 @@ char* strnextfield(char *str, size_t *clen)
 
 	// update previous field's length to caller
 	if(clen)
-		*clen = (U64)p - (U64)str;
+		*clen = (size_t)p - (size_t)str;
 
 	// find the field after whitespaces
 	num = strspn(p, whitespaces);
@@ -273,6 +273,7 @@ void MasterdCore::RunThread(void)
 	ServerAddress *addr;
 	Packet *data;
 	tPeerRecord *peerrec;
+	char str[16];
 	
 	
 	// print welcome message
@@ -368,7 +369,7 @@ void MasterdCore::ProcMessage(ServerAddress *addr, Packet *data, tPeerRecord *pe
 	tMessageSession	message;
 	tPacketHeader	header;
 	int pack_type = 0;
-	char *str;
+	char str[16];
 	bool result;
 
 	
@@ -393,16 +394,14 @@ BadRepPeer:
 
 		// report bad message header from peer
 		debugPrintf(DPRINT_VERBOSE, "Received bad packet from %s:%hu\n",
-					str = addr->toString(), addr->port);
-		delete[] str;
+					addr->toString(str), addr->port);
 
 		// increase bad reputation for peer
 		gm_pFloodControl->RepPeer(peerrec, m_Prefs.floodBadMsgTicket);
 		return;
 	}
 
-	debugPrintf(DPRINT_VERBOSE, "[%s:%hu]: ", str = addr->toString(), addr->port);
-	delete[] str;
+	debugPrintf(DPRINT_VERBOSE, "[%s:%hu]: ", addr->toString(str), addr->port);
 
 	// handle the specific message type
 	switch(header.type)
@@ -689,7 +688,7 @@ SkipToNext:
 		// report about unknown variables
 		if(!isFound)
 		{
-			debugPrintf(DPRINT_WARN, " - Warning: config variable %c%s is unknown to me.\n",
+			debugPrintf(DPRINT_WARN, " - Warning: config variable %s is unknown to me.\n",
 					pLine);
 		}
 	}
@@ -766,7 +765,7 @@ void MasterdCore::CreatePrefs(void)
 			}
 			
 			// figure out string length before newline
-			len = ((U64)str2 - (U64)str);
+			len = (size_t)str2 - (size_t)str;
 			
 			// write out string just before newline
 			fout << CONFIG_LINE_COMMENT;
@@ -808,7 +807,6 @@ void MasterdCore::CreatePrefs(void)
 	// report success and close out the opened stream
 	debugPrintf(DPRINT_INFO, " - Wrote new preference file successfully: %s\n", m_Prefs.file);
 	fout.close();
-
 }
 
 
@@ -824,7 +822,7 @@ void MasterdCore::SetPid(void)
 	// get our process identifier
 	pid = getpid();
 
-	// open output stream to create create the pid file
+	// open output stream to create the pid file
 	fout.open(m_Prefs.pidfile);
 	if(!fout.good()) {
 		debugPrintf(DPRINT_ERROR, " - Failed writing pid file: %s  (Reason: [%d] %s)\n", m_Prefs.pidfile, errno, strerror(errno));

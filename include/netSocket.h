@@ -58,9 +58,12 @@ class netAddress
 public:
   netAddress () {}
   netAddress ( const char* host, int port ) ;
+  netAddress ( int address, int port ) ;
 
   void set ( const char* host, int port ) ;
+  void set ( int address, int port ) ;
   const char* getHost () const ;
+  int getAddress() const ;
   int getPort() const ;
 
   static const char* getLocalHost () ;

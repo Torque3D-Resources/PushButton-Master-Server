@@ -60,6 +60,10 @@ netAddress::netAddress ( const char* host, int port )
 {
   set ( host, port ) ;
 }
+netAddress::netAddress ( int address, int port )
+{
+  set ( address, port ) ;
+}
 
 
 void netAddress::set ( const char* host, int port )
@@ -98,6 +102,15 @@ void netAddress::set ( const char* host, int port )
   }
 }
 
+void netAddress::set ( int address, int port )
+{
+  memset(this, 0, sizeof(netAddress));
+
+  sin_family = AF_INET ;
+  sin_addr = htonl (address);
+  sin_port = htons (port);
+}
+
 
 /* Create a string object representing an IP address.
    This is always a string of the form 'dd.dd.dd.dd' (with variable
@@ -117,6 +130,11 @@ const char* netAddress::getHost () const
   return buf;
 }
 
+
+int netAddress::getAddress() const
+{
+  return ntohl(sin_addr);
+}
 
 int netAddress::getPort() const
 {

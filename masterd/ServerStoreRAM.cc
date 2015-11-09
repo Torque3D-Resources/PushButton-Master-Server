@@ -108,7 +108,7 @@ bool ServerStoreRAM::FindServer(ServerAddress *addr, ServerInfo **serv)
 void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 {
 	U64			slot = AddrToSlot(addr);
-	char		*oldGame, *oldMission, *str;
+	char		*oldGame, *oldMission, str[16];
 
 
 	// abort on NULL
@@ -128,8 +128,7 @@ void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 	m_Servers[slot]		= *info;
 
 	debugPrintf(DPRINT_VERBOSE, "New Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-				str = addr->toString(), addr->port, info->gameType, info->missionType);
-	delete[] str;
+				addr->toString(str), addr->port, info->gameType, info->missionType);
 	
 	// give back the old string references to the stack serverinfo
 	info->gameType		= oldGame;
@@ -145,12 +144,11 @@ void ServerStoreRAM::RemoveServer(tcServerMap::iterator &it)
 {
 	ServerInfo *info;
 	info = &it->second;
-	char *str;
+	char str[16];
 
 	
 	debugPrintf(DPRINT_VERBOSE, "Remove Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-				str = info->addr.toString(), info->addr.port, info->gameType, info->missionType);
-	delete[] str;
+				info->addr.toString(str), info->addr.port, info->gameType, info->missionType);
 	
 	// notify game and mission types manager
 	m_GameTypes.PopRef(info->gameType);
@@ -240,7 +238,7 @@ void ServerStoreRAM::HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key
 void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 {
 	ServerInfo	*rec;
-	char		*oldGame, *oldMission, *str;
+	char		*oldGame, *oldMission, str[16];
 
 
 	// find the existing server record
@@ -252,13 +250,13 @@ void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 	}
 
 	// update an existing server record
+	rec->playerCount	= info->playerCount;
 	rec->maxPlayers 	= info->maxPlayers;
 	rec->regions		= info->regions;
 	rec->version		= info->version;
+	rec->CPUSpeed		= info->CPUSpeed;
 	rec->infoFlags		= info->infoFlags;
 	rec->numBots		= info->numBots;
-	rec->CPUSpeed		= info->CPUSpeed;
-	rec->playerCount	= info->playerCount;
 
 	// special handling of game and mission type,
 	// remember current type references.
@@ -279,14 +277,13 @@ void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 		delete[] rec->playerList;
 
 	rec->playerList = info->playerList;
-	info->setToDestroy(false);			// don't destroy list, we're using it
+	info->setToDestroy(false);	// don't destroy player list, we're using it
 
 	// update last information update time
-	rec->last_info		= getAbsTime();
+	rec->last_info = getAbsTime();
 
 	debugPrintf(DPRINT_VERBOSE, "Updated Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-				str = addr->toString(), addr->port, rec->gameType, rec->missionType);
-	delete[] str;
+				addr->toString(str), addr->port, rec->gameType, rec->missionType);
 	
 	// done
 }
@@ -331,7 +328,6 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 				goto SkipFilterTests; // no match found, no servers will satify filter
 		}
 	}
-	
 	
 	// build server list matching the query filter
 	for(it = m_Servers.begin(); it != m_Servers.end(); it++)
@@ -382,7 +378,7 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 		// --TRON
 
 		// check buddies list
-		if(filter->buddyCount)
+		if(filter->buddyCount && info->playerList)
 		{
 			buddyFound = false;
 			
@@ -405,7 +401,7 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 			if(!buddyFound)
 				continue; // nope, skip
 		}
-		
+
 
 		// server passed the filter test, add it to the list
 		addr.address	= info->addr.address;

@@ -198,15 +198,15 @@ class ServerFilter
 public:
 	char	*gameType;			// game type string
 	char	*missionType;		// mission type string
-	U8		minPlayers;			// minimum player count
-	U8		maxPlayers;			// maximum player count
+	U32		*buddyList;			// pointer to buddy array
 	U32		regions;			// regions bitmask
 	U32		version;			// minimum version
+	U16		minCPUSpeed;		// minimum processor speed
+	U8		minPlayers;			// minimum player count
+	U8		maxPlayers;			// maximum player count
 	U8		filterFlags;		// info flag filter
 	U8		maxBots;			// maximum bots
-	U16		minCPUSpeed;		// minimum processor speed
 	U8		buddyCount;			// number of buddies in array
-	U32		*buddyList;			// pointer to buddy array
 
 	ServerFilter()
 	{
@@ -215,7 +215,8 @@ public:
 		buddyList		= NULL;
 	}
 
-	~ServerFilter() {
+	~ServerFilter()
+	{
 		if(missionType)	delete[] missionType;
 		if(gameType)	delete[] gameType;
 		if(buddyList)	delete[] buddyList;
@@ -230,11 +231,13 @@ public:
 class ServerResults
 {
 public:
-	ServerResults() {
+	ServerResults()
+	{
 		next = NULL;
 	}
 
-	void dealloc() {
+	void dealloc()
+	{
 		// We don't want to recurse in the destructor, so we iterate
 		ServerResults * cur = this->next, *tmp;
 
@@ -265,14 +268,14 @@ public:
 
 	char	*gameType;
 	char	*missionType;
-	U8		maxPlayers;
+	U32		*playerList;	// players GUID array, may be NULL!
 	U32		regions;
 	U32		version;
-	U8		infoFlags;
-	U8		numBots;
 	U16		CPUSpeed;
 	U8		playerCount;
-	U32		*playerList;	// players GUID array
+	U8		maxPlayers;
+	U8		infoFlags;
+	U8		numBots;
 
 
 	// Bookkeeping information
@@ -317,13 +320,16 @@ public:
 };
 
 
-class Server {
+class Server
+{
 	public:
-	Server() {
+	Server()
+	{
 		vInfo = new ServerInfo();
 		vAddress = new ServerAddress();
 	};
-	~Server() {
+	~Server()
+	{
 		delete vAddress;
 		delete vInfo;
 	};
@@ -342,6 +348,10 @@ class ServerStore
 public:
 	UniqueStringList	m_GameTypes;
 	UniqueStringList	m_MissionTypes;
+
+
+	virtual ~ServerStore() {}
+
 	
 	// Work functions
 	virtual void DoProcessing(int count = 5) = 0;

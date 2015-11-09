@@ -209,13 +209,6 @@ void Packet::writeNullString(char *dat)
 }
 */
 
-/**
- * @brief return length of written packet.
- */
-size_t Packet::getLength()
-{
-	return ptr - buff;
-}
 
 /**
  * @brief Write standard protocol header to the packet.
@@ -226,11 +219,6 @@ void Packet::writeHeader(U8 type, U8 flags, U16 session, U16 key)
 	writeU8( flags);	// flags
 	writeU16(session);	// session
 	writeU16(key);		// key
-}
-
-void Packet::writeHeader(tPacketHeader &header)
-{
-	writeHeader(header.type, header.flags, header.session, header.key);
 }
 
 /**
@@ -244,10 +232,6 @@ void Packet::readHeader(U8 &type, U8 &flags, U16 &session, U16 &key)
 	key		= readU16();	// key
 }
 
-void Packet::readHeader(tPacketHeader &header)
-{
-	readHeader(header.type, header.flags, header.session, header.key);
-}
 
 /**
  * @brief Return pointer to copy of packet's internal buffer.
@@ -267,11 +251,4 @@ char * Packet::getBufferCopy()
 	memcpy(buff_copy, this->buff, getLength());
 	return buff_copy;
 }
-
-char* Packet::getBufferPtr()
-{
-	// return actual buffer pointer, saves some heap thrashing
-	return buff;
-}
-
 

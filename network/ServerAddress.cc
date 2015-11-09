@@ -59,7 +59,8 @@ ServerAddress::ServerAddress(const char *host, const U16 port) {
  * systems.
  */
 ServerAddress::ServerAddress(const netAddress * a) {
-	getFrom(a);
+	this->port		= a->getPort();
+	this->address	= a->getAddress();
 }
 
 /**
@@ -89,20 +90,37 @@ void ServerAddress::set( const char *host, const U16 port )
 	this->port = port;
 }
 
+#if 0
 /**
- * @brief Get a string representing the address.
+ * @brief Get a string representing the IPv4 address.
  *
- * Format is "a.b.c.d:port". You must deallocate
+ * Format is "a.b.c.d". You must deallocate
  * the string returned.
  *
  * @return a new string containing the address.
  */
-char* ServerAddress::toString(  )
+char* ServerAddress::toString() const
 {
-	char * tmp = new char[24];
-	sprintf(tmp, "%u.%u.%u.%u",
+	char * tmp = new char[16];
+	sprintf(tmp, "%hhu.%hhu.%hhu.%hhu",
 		addy[0], addy[1], addy[2], addy[3]);
 	return tmp;
+}
+#endif // 0
+
+/**
+ * @brief Get a string representing the IPv4 address.
+ *
+ * Format is "a.b.c.d".
+ *
+ * @param[out] buff String buffer with at least 16 bytes capacity.
+ * @return provided string buffer containing the address.
+ */
+char* ServerAddress::toString(char *buff) const
+{
+	sprintf(buff, "%hhu.%hhu.%hhu.%hhu",
+		addy[0], addy[1], addy[2], addy[3]);
+	return buff;
 }
 
 /**
@@ -112,12 +130,7 @@ char* ServerAddress::toString(  )
  */
 void ServerAddress::putInto( netAddress * a )
 {
-	char *str;
-
-	str = this->toString();
-	a->set(str, this->port);
-	
-	delete[] str;
+	a->set(this->address, this->port);
 }
 
 /**
@@ -127,8 +140,10 @@ void ServerAddress::putInto( netAddress * a )
  */
 void ServerAddress::getFrom( const netAddress * a )
 {
-	set(a->getHost(), a->getPort());
+	this->port		= a->getPort();
+	this->address	= a->getAddress();
 }
+
 
 /**
  * @brief Check if this ServerAddress equals another.

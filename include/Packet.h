@@ -132,14 +132,15 @@ class Packet
 
 
 		// Helper funcs
-		size_t	getLength();
+		size_t	getLength()		{ return ptr - buff; }
+		size_t  getBufferSize()	{ return size; }
 		char*	getBufferCopy();
-		char*	getBufferPtr();
+		char*	getBufferPtr()	{ return buff; }
 		
 		void	writeHeader(U8 type, U8 flags, U16 session, U16 key);
-		void	writeHeader(tPacketHeader &header);
+		void	writeHeader(tPacketHeader &header)	{ writeHeader(header.type, header.flags, header.session, header.key); }
 		void	readHeader(U8 &type, U8 &flags, U16 &session, U16 &key);
-		void	readHeader(tPacketHeader &header);
+		void	readHeader(tPacketHeader &header)	{ readHeader(header.type, header.flags, header.session, header.key); }
 
 		bool	getStatus() { return statusOK; };
 

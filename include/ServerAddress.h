@@ -41,14 +41,20 @@ public:
 	ServerAddress(const char *host, const U16 port);
 	ServerAddress(const netAddress *addr);
 
-	char* toString();
+//	char* toString() const;
+	char* toString(char *buff) const;
 	void set(const char *host, const U16 port);
+	void set(U32 address, const U16 port)
+	{
+		this->address = address;
+		this->port    = port;
+	}
 
 
-	void putInto( netAddress * a );
-	void getFrom( const netAddress * a );
+	void putInto(netAddress *a);
+	void getFrom(const netAddress *a);
 
-	bool equals(const ServerAddress * a);
+	bool equals(const ServerAddress *a);
 
 	/**
 	 * @brief Quads for addy.

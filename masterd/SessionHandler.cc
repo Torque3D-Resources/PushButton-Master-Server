@@ -92,7 +92,7 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 {
 	tcPeerRecordMap::iterator	it;
 	tPeerRecord					*pr;
-	char						*str;
+	char						str[16];
 
 
 	// abort on NULL
@@ -127,8 +127,7 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 
 			// report record creation
 			debugPrintf(DPRINT_VERBOSE, "FloodControl: Record created for %s\n",
-						str = (*peerrec)->peer.toString());
-			delete[] str;
+						(*peerrec)->peer.toString(str));
 		}
 	} else
 	{
@@ -186,8 +185,7 @@ void FloodControl::DoProcessing(U32 count)
 {
 	tcPeerRecordMap::iterator next;
 	tPeerRecord *peerrec;
-	char *str;
-//	U32 i;
+	char str[16];
 
 
 //CheckMoreRecords:
@@ -214,8 +212,7 @@ void FloodControl::DoProcessing(U32 count)
 
 		// report peer record expired
 		debugPrintf(DPRINT_VERBOSE, "FloodControl: Record expired for %s\n",
-					str = peerrec->peer.toString());
-		delete[] str;
+					peerrec->peer.toString(str));
 
 		next = m_ProcIT;
 		next++;
@@ -263,7 +260,7 @@ bool FloodControl::CheckPeer(ServerAddress &peer, tPeerRecord **peerrec, bool ef
 bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 {
 	S32 ts;
-	char *str;
+	char str[16];
 
 	
 	// abort on NULL
@@ -295,10 +292,8 @@ bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 		peerrec->tsLastSeen		= ts;
 
 		// report unban
-		str = peerrec->peer.toString();
 		debugPrintf(DPRINT_INFO, "FloodControl: Unbanned %s:%u [banned %lu times]\n",
-					str, peerrec->peer.port, peerrec->bans);
-		delete[] str;
+					peerrec->peer.toString(str), peerrec->peer.port, peerrec->bans);
 	}
 
 	// now check to see if peer is still banned based on their record
@@ -331,7 +326,7 @@ void FloodControl::RepPeer(ServerAddress &peer, S32 tickets)
 
 void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 {
-	char *str;
+	char str[16];
 
 	
 	// abort on NULL
@@ -355,11 +350,8 @@ void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 	CheckSessions(peerrec, true);
 
 	// report ban
-	str = peerrec->peer.toString();
 	debugPrintf(DPRINT_INFO, "FloodControl: Banned %s:%u [banned %lu times]\n",
-				str, peerrec->peer.port, peerrec->bans);
-	delete[] str;
-	
+				peerrec->peer.toString(str), peerrec->peer.port, peerrec->bans);	
 }
 
 

@@ -48,7 +48,7 @@ bool handleListRequest(tMessageSession &msg)
 	Session			*ps;
 	U8				index;
 	int				i;
-	char			*str;
+	char			str[16];
 
 	
 	/*
@@ -80,11 +80,10 @@ bool handleListRequest(tMessageSession &msg)
 	if(gm_pConfig->verbosity > 3)
 	{
 		if(index == 0xFF)
-			printf("Received list query request from %s:%hu\n", str = msg.addr->toString(), msg.addr->port);
+			printf("Received list query request from %s:%hu\n", msg.addr->toString(str), msg.addr->port);
 		else
-			printf("Received list resend request from %s:%hu\n", str = msg.addr->toString(), msg.addr->port);
+			printf("Received list resend request from %s:%hu\n", msg.addr->toString(str), msg.addr->port);
 		printf(" [F: %X, S: %X, K: %u, I: %X]\n", msg.header->flags, msg.header->session, msg.header->key, index);
-		delete[] str;
 	}
 
 	// don't waste our time parsing the rest of this resend request packet,
@@ -134,9 +133,7 @@ bool handleListRequest(tMessageSession &msg)
 	if(filter.buddyCount)
 	{
 		filter.buddyList = new U32[filter.buddyCount];
-
-		for(i=0; i<filter.buddyCount; i++)
-			filter.buddyList[i] = msg.pack->readU32();
+		msg.pack->readBytes(filter.buddyList, filter.buddyCount * sizeof(U32));
 	}
 
 	// check packet parser status
@@ -160,7 +157,7 @@ bool handleListRequest(tMessageSession &msg)
 	msg.session = ps;
 	gm_pStore->QueryServers(ps, &filter);
 	
-	debugPrintf(DPRINT_VERBOSE, "Got %d results from a queryServers.\n", ps->total);
+	debugPrintf(DPRINT_VERBOSE, "Got %d results from queryServers.\n", ps->total);
 
 	// send the results
 	for(i=0; i<ps->packTotal; i++)
@@ -243,14 +240,12 @@ bool handleInfoResponse(tMessageSession &msg)
 	// check packet parser status
 	if(!msg.pack->getStatus())
 		return false; // packet was malformed
-	
-	if(info.playerCount)
+
+	// Torque doesn't normally send player GUIDs, while Tribes 2 did, so account for it
+	if(info.playerCount && ((msg.pack->getLength() / sizeof(U32)) >= info.playerCount))
 	{
 		info.playerList = new U32[info.playerCount];
-
-		// Read in players
-		for(int i=0; i< info.playerCount; i++)
-			info.playerList[i] = msg.pack->readU32();
+		msg.pack->readBytes(info.playerList, info.playerCount * sizeof(U32));
 	}
 
 //	// check packet parser status

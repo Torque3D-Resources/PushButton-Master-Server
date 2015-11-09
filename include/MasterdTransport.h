@@ -58,7 +58,7 @@ public:
 	MasterdTransport(char * host, short port);
 	~MasterdTransport();
 
-	bool GetStatus(void);
+	bool GetStatus(void) const { return sockOK; }
 	bool poll(Packet ** data, ServerAddress ** from, int timeout);
 	void sendPacket(Packet * data, ServerAddress * to);
 };
