@@ -154,6 +154,9 @@ void debugPrintf(const int level, const char *format, ...)
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
+
+	// explicit flush, for stdout redirection cases
+	fflush(stdout);
 }
 
 void debugPrintHexDump(const void *ptr, size_t size)
@@ -359,7 +362,7 @@ void MasterdCore::RunThread(void)
 	initNetworkLib();
 
 	// create and bind to socket
-	debugPrintf(DPRINT_INFO, " - Binding master server to %s:%lu\n", m_Prefs.address, m_Prefs.port);
+	debugPrintf(DPRINT_INFO, " - Binding master server to %s:%u\n", m_Prefs.address, m_Prefs.port);
 	gm_pTransport = new MasterdTransport(m_Prefs.address, (U16)m_Prefs.port);
 	if(!gm_pTransport->GetStatus())
 	{
@@ -435,7 +438,6 @@ void MasterdCore::ProcMessage(ServerAddress *addr, Packet *data, tPeerRecord *pe
 {
 	tMessageSession	message;
 	tPacketHeader	header;
-	int pack_type = 0;
 	char str[16];
 	bool result;
 
@@ -510,7 +512,7 @@ BadRepPeer:
 
 		default:
 		{
-			debugPrintf(DPRINT_VERBOSE, "Unknown Packet Type %d\n", pack_type);
+			debugPrintf(DPRINT_VERBOSE, "Unknown Packet Type %hhu\n", header.type);
 			result = false;
 		}
 	}

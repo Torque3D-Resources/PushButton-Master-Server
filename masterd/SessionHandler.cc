@@ -292,7 +292,7 @@ bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 		peerrec->tsLastSeen		= ts;
 
 		// report unban
-		debugPrintf(DPRINT_INFO, "FloodControl: Unbanned %s:%u [banned %lu times]\n",
+		debugPrintf(DPRINT_INFO, "FloodControl: Unbanned %s:%hu [banned %u times]\n",
 					peerrec->peer.toString(str), peerrec->peer.port, peerrec->bans);
 	}
 
@@ -350,7 +350,7 @@ void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 	CheckSessions(peerrec, true);
 
 	// report ban
-	debugPrintf(DPRINT_INFO, "FloodControl: Banned %s:%u [banned %lu times]\n",
+	debugPrintf(DPRINT_INFO, "FloodControl: Banned %s:%hu [banned %u times]\n",
 				peerrec->peer.toString(str), peerrec->peer.port, peerrec->bans);	
 }
 

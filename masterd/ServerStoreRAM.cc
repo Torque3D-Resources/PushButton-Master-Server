@@ -137,7 +137,7 @@ void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 
 	debugPrintf(DPRINT_VERBOSE, "New Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
 				addr->toString(str), addr->port, info->gameType, info->missionType);
-	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %lu, regions 0x%08lu\n",
+	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %u, regions 0x%08x\n",
 				info->playerCount, info->numBots, info->maxPlayers, info->CPUSpeed, info->version, info->regions);
 	
 	// give back the old string references to the stack serverinfo
@@ -159,7 +159,7 @@ void ServerStoreRAM::RemoveServer(tcServerMap::iterator &it)
 	
 	debugPrintf(DPRINT_VERBOSE, "Remove Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
 				info->addr.toString(str), info->addr.port, info->gameType, info->missionType);
-	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %lu, regions 0x%08lu\n",
+	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %u, regions 0x%08x\n",
 				info->playerCount, info->numBots, info->maxPlayers, info->CPUSpeed, info->version,info->regions);
 	
 	// notify game and mission types manager
@@ -296,7 +296,7 @@ void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 
 	debugPrintf(DPRINT_VERBOSE, "Updated Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
 				addr->toString(str), addr->port, rec->gameType, rec->missionType);
-	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %lu, regions 0x%08lu\n",
+	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %u, regions 0x%08x\n",
 				rec->playerCount, rec->numBots, rec->maxPlayers, rec->CPUSpeed, rec->version, rec->regions);
 	
 	// done
@@ -317,7 +317,7 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 
 	debugPrintf(DPRINT_VERBOSE, "Query for Game:\"%s\", Mission:\"%s\"\n",
 				filter->gameType, filter->missionType);
-	debugPrintf(DPRINT_DEBUG, " Players Min/Max(Bots) %hhu/%hhu(%hhu), CPU >= %hu MHz, Version >= %lu, Regions 0x%08lu, Flags 0x%08lu\n",
+	debugPrintf(DPRINT_DEBUG, " Players Min/Max(Bots) %hhu/%hhu(%hhu), CPU >= %hu MHz, Version >= %u, Regions 0x%08x, Flags 0x%08x\n",
 				filter->minPlayers, filter->maxPlayers, filter->maxBots, filter->minCPUSpeed, filter->version, filter->regions, filter->filterFlags);
 
 	// special handling of game and mission types
@@ -405,7 +405,7 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 		if(filter->regions && !(info->regions & filter->regions))
 		{
 #ifdef DEBUG_FILTER
-			debugPrintf(DPRINT_DEBUG, "  Filter fault: Regions mask, 0x%08lu & 0x%08lu = 0x%08lu.\n",
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Regions mask, 0x%08x & 0x%08x = 0x%08x.\n",
 						info->regions, filter->regions, info->regions & filter->regions);
 #endif // DEBUG_FILTER
 			continue; // skip
@@ -424,7 +424,7 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 		if(filter->filterFlags && !(info->infoFlags & filter->filterFlags))
 		{
 #ifdef DEBUG_FILTER
-			debugPrintf(DPRINT_DEBUG, "  Filter fault: Flags mask, 0x%08lu & 0x%08lu = 0x%08lu.\n",
+			debugPrintf(DPRINT_DEBUG, "  Filter fault: Flags mask, 0x%08x & 0x%08x = 0x%08x.\n",
 						info->infoFlags, filter->filterFlags, info->infoFlags & filter->filterFlags);
 #endif // DEBUG_FILTER
 			continue; // skip

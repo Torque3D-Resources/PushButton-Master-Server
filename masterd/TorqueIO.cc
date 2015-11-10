@@ -180,7 +180,7 @@ bool handleListRequest(tMessageSession &msg)
 	msg.session = ps;
 	gm_pStore->QueryServers(ps, &filter);
 	
-	debugPrintf(DPRINT_VERBOSE, "Got %d results from queryServers.\n", ps->total);
+	debugPrintf(DPRINT_VERBOSE, "Got %hu results from queryServers.\n", ps->total);
 
 	// send the results
 	for(i=0; i<ps->packTotal; i++)
