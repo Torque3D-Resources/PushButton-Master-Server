@@ -107,7 +107,7 @@ void netAddress::set ( int address, int port )
   memset(this, 0, sizeof(netAddress));
 
   sin_family = AF_INET ;
-  sin_addr = htonl (address);
+  sin_addr = address; //htonl (address);
   sin_port = htons (port);
 }
 
@@ -133,7 +133,7 @@ const char* netAddress::getHost () const
 
 int netAddress::getAddress() const
 {
-  return ntohl(sin_addr);
+  return sin_addr; //ntohl(sin_addr);
 }
 
 int netAddress::getPort() const
