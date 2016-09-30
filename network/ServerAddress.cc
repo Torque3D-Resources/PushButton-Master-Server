@@ -99,11 +99,10 @@ void ServerAddress::set( const netAddress *a )
  * @param[out] buff String buffer with at least 16 bytes capacity.
  * @return provided string buffer containing the address.
  */
-char* ServerAddress::toString(char *buff) const
+void ServerAddress::toString( char outStr[256] ) const
 {
-	sprintf(buff, "%hhu.%hhu.%hhu.%hhu",
-		addy[0], addy[1], addy[2], addy[3]);
-	return buff;
+	netAddress addr(this);
+	addr.toString(outStr);
 }
 
 /**

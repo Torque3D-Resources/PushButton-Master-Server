@@ -404,7 +404,8 @@ void MasterdCore::RunThread(void)
 			if(!gm_pFloodControl->CheckPeer(*addr, &peerrec, true))
 			{
 				// bad reputation, ignore peer
-				debugPrintf(DPRINT_DEBUG, "Dropped packet from banned host %s:%hu\n", addr->toString(str), addr->port);
+				addr->toString(buffer);
+				debugPrintf(DPRINT_DEBUG, "Dropped packet from banned host %s\n", buffer);
 				goto SkipPeerMsg;
 			}
 			
@@ -482,7 +483,6 @@ BadRepPeer:
 	{
 		addr->toString(buffer);
 		debugPrintf(DPRINT_VERBOSE, "[%s]: ", buffer);
-		delete[] str;
 	}
 
 	// handle the specific message type

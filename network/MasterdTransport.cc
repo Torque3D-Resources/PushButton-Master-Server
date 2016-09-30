@@ -138,7 +138,7 @@ bool MasterdTransport::poll(Packet **data, ServerAddress **from, int timeout)
  */
 void MasterdTransport::sendPacket(Packet *data, ServerAddress *to)
 {
-	netAddress naddr(to->address, to->port);
+	netAddress naddr(to);
 	this->sock->sendto(data->getBufferPtr(), (int)data->getLength(), 0, &naddr);
 }
 

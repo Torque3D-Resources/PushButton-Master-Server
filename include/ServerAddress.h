@@ -40,7 +40,7 @@ public:
 	ServerAddress(const ServerAddress *addr);
 	ServerAddress(const netAddress *addr);
 
-	void toString( char outstr[256] );
+	void toString( char outstr[256] ) const;
 	void set(const netAddress *addr);
 
 

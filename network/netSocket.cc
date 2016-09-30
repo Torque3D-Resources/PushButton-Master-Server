@@ -33,11 +33,6 @@ netAddress::netAddress ( const ServerAddress *inData )
 {
   set(inData);
 }
-netAddress::netAddress ( int address, int port )
-{
-  set ( address, port ) ;
-}
-
 
 void netAddress::set ( const ServerAddress *info )
 {
@@ -103,12 +98,6 @@ void netAddress::getHost (char outStr[256]) const
 {
   outStr[0] = '\0';
   inet_ntop(data.ss_family, &data, outStr, 256);
-}
-
-
-int netAddress::getAddress() const
-{
-  return sin_addr; //ntohl(sin_addr);
 }
 
 int netAddress::getPort() const
