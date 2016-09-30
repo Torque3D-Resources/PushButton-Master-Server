@@ -5,7 +5,7 @@
 #include <map>
 
 
-typedef std::map<U64, ServerInfo> tcServerMap;
+typedef std::unordered_map<ServerAddress, ServerInfo> tcServerMap;
 
 /**
  * Linked list server store implementation
@@ -17,7 +17,6 @@ private:
 	tcServerMap				m_Servers;
 	tcServerMap::iterator	m_ProcIT;
 
-	U64  AddrToSlot(ServerAddress *addr);
 	bool FindServer(ServerAddress *addr, tcServerMap::iterator &it);
 	bool FindServer(ServerAddress *addr, ServerInfo **serv);
 	void AddServer(ServerAddress *addr, ServerInfo *info);

@@ -64,34 +64,14 @@ ServerStoreRAM::~ServerStoreRAM()
 // Server Store in RAM rewrite
 //==============================================================================
 
-U64 ServerStoreRAM::AddrToSlot(ServerAddress *addr)
-{
-	U64 slot;
-
-	
-	// abort on NULL
-	if(!addr)
-		return 0;
-
-	// 2 bytes: unused / 0x0000
-	// 4 bytes: IPv4 address
-	// 2 bytes: UDP port number
-	slot = (addr->address << 16) | (addr->port & 0xFFFF);
-
-	// done
-	return slot;
-}
-
 bool ServerStoreRAM::FindServer(ServerAddress *addr, tcServerMap::iterator &it)
 {
-	U64		slot = AddrToSlot(addr);
-
 	// abort on NULL
 	if(!addr)
 		return false;
 
 	// find server entry
-	it = m_Servers.find(slot);
+	it = m_Servers.find(*addr);
 	if(it != m_Servers.end())
 		return true;
 
@@ -115,8 +95,8 @@ bool ServerStoreRAM::FindServer(ServerAddress *addr, ServerInfo **serv)
 
 void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 {
-	U64			slot = AddrToSlot(addr);
-	char		*oldGame, *oldMission, str[16];
+	char		*oldGame, *oldMission;
+	char buffer[256];
 
 
 	// abort on NULL
@@ -133,10 +113,12 @@ void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 	info->missionType	= m_MissionTypes.Push(oldMission = info->missionType);
 
 	// insert new server record
-	m_Servers[slot]		= *info;
+	m_Servers[*addr]		= *info;
 
-	debugPrintf(DPRINT_VERBOSE, "New Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-				addr->toString(str), addr->port, info->gameType, info->missionType);
+
+	addr->toString(buffer);
+	debugPrintf(DPRINT_VERBOSE, "New Server [%s] Game:\"%s\", Mission:\"%s\"\n",
+				buffer, info->gameType, info->missionType);
 	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %u, regions 0x%08x\n",
 				info->playerCount, info->numBots, info->maxPlayers, info->CPUSpeed, info->version, info->regions);
 	
@@ -154,11 +136,11 @@ void ServerStoreRAM::RemoveServer(tcServerMap::iterator &it)
 {
 	ServerInfo *info;
 	info = &it->second;
-	char str[16];
+	char buffer[256];
 
-	
-	debugPrintf(DPRINT_VERBOSE, "Remove Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-				info->addr.toString(str), info->addr.port, info->gameType, info->missionType);
+	info->addr.toString(buffer);
+	debugPrintf(DPRINT_VERBOSE, "Remove Server [%s] Game:\"%s\", Mission:\"%s\"\n",
+				buffer, info->gameType, info->missionType);
 	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %u, regions 0x%08x\n",
 				info->playerCount, info->numBots, info->maxPlayers, info->CPUSpeed, info->version,info->regions);
 	
@@ -239,7 +221,7 @@ void ServerStoreRAM::HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key
 	// special.
 
 	// seed the random generator
-	srand(getAbsTime() + addr->address + addr->port);
+	srand(getAbsTime() + *((uint32_t*)addr->address.ipv4.netNum) + addr->port);
 	
 	if(session)	*session	= (U16)rand();
 	if(key)		*key		= (U16)rand();
@@ -250,7 +232,8 @@ void ServerStoreRAM::HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key
 void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 {
 	ServerInfo	*rec;
-	char		*oldGame, *oldMission, str[16];
+	char		*oldGame, *oldMission;
+	char buffer[256];
 
 
 	// find the existing server record
@@ -294,8 +277,9 @@ void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 	// update last information update time
 	rec->last_info = getAbsTime();
 
-	debugPrintf(DPRINT_VERBOSE, "Updated Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-				addr->toString(str), addr->port, rec->gameType, rec->missionType);
+    addr->toString(buffer);
+	debugPrintf(DPRINT_VERBOSE, "Updated Server [%s] Game:\"%s\", Mission:\"%s\"\n",
+				buffer, rec->gameType, rec->missionType);
 	debugPrintf(DPRINT_DEBUG, " Players(bots)/Max %hhu(%hhu)/%hhu, CPU %hu MHz, version %u, regions 0x%08x\n",
 				rec->playerCount, rec->numBots, rec->maxPlayers, rec->CPUSpeed, rec->version, rec->regions);
 	
@@ -307,7 +291,8 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 	tcServerMap::iterator	it;
 	ServerInfo				*info;
 	tServerAddress			addr;
-	char					*game = NULL, *mission = NULL, str[16];
+	char					*game = NULL, *mission = NULL;
+	char buffer[256];
 	bool					buddyFound;
 	U32						i, n;
 #ifdef DEBUG_FILTER
@@ -361,8 +346,9 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 		info = &it->second;
 
 #ifdef DEBUG_FILTER
-		debugPrintf(DPRINT_DEBUG, " FilterCheck(%zu/%zu) Server [%s:%hu] Game:\"%s\", Mission:\"%s\"\n",
-					++current, m_Servers.size(), info->addr.toString(str), info->addr.port, info->gameType, info->missionType);
+		info->addr.toString(buffer);
+		debugPrintf(DPRINT_DEBUG, " FilterCheck(%zu/%zu) Server [%s] Game:\"%s\", Mission:\"%s\"\n",
+					++current, m_Servers.size(), buffer, info->gameType, info->missionType);
 #endif // DEBUG_FILTER
 		
 		// check the game type
@@ -486,8 +472,9 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 
 
 		// server passed the filter test, add it to the list
-		addr.address	= info->addr.address;
-		addr.port		= info->addr.port;
+		// TOFIX
+		//addr.address	= info->addr.address;
+		//addr.port		= info->addr.port;
 		
 		session->results.push_back(addr);
 	}

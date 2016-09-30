@@ -94,7 +94,7 @@ typedef struct tPeerRecord
 	U32				bans;				// count of times peer has been banned
 } tPeerRecord;
 
-typedef std::map<U32, tPeerRecord> tcPeerRecordMap;
+typedef std::unordered_map<ServerAddress, tPeerRecord> tcPeerRecordMap;
 
 
 class FloodControl

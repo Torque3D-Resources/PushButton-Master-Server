@@ -71,8 +71,11 @@ public:
 	 union
 	 {
 	 	struct {
-	 		U32 address;
-	 		U8 netNum[4];
+	 		union
+	 		{
+	 			U32 address;
+	 			U8 netNum[4];
+	 		};
 	 	} ipv4;
 
 	 	struct {
@@ -93,7 +96,83 @@ public:
 	 * @brief Port for addy.
 	 */
 	U16	port;
+   
+    // @note: comparison operator doesn't check netFlow or netScope
+    bool operator==(const ServerAddress &other) const
+    {
+        if(other.type != type)
+            return false; // incompatible address types
+           
+        if(other.port != port)
+            return false; // ports don't match
+ 
+        if(type == IPAddress)
+        {
+            // compare IPv4 address
+            return (other.address.ipv4.address == address.ipv4.address);
+        }
+        else if(type == IPV6Address)
+        {
+            // compare IPv6 address
+            return (memcmp(other.address.ipv6.netNum, address.ipv6.netNum,
+                        sizeof(address.ipv6.netNum)) == 0);
+        }
+       
+        // invalid address type
+        return false;
+    }
 };
+
+#include <unordered_map>
+
+namespace std
+{
+    template<>
+    struct hash<ServerAddress>
+    {
+        std::size_t operator()(const ServerAddress &sa) const
+        {
+#ifdef __LP64__
+            // 64bit platform
+           
+            if(sa.type == ServerAddress::IPAddress)
+            {
+                // address + port
+                return (std::size_t)sa.address.ipv4.address | ((std::size_t)sa.port << 32);
+            }
+            else if(sa.type == ServerAddress::IPV6Address)
+            {
+                // hash address
+                const uint64_t *addr = (const uint64_t *)(sa.address.ipv6.netNum);
+                return
+                    (hash<uint64_t>()(addr[0])
+                    ^ (hash<uint64_t>()(addr[1]) << 1) >> 1);
+            }
+#else // !__LP64__
+            // assuming 32bit platform
+ 
+            if(type == ServerAddress::IPAddress)
+            {
+                // just the address should be good enough
+                return sa.address.ipv4.address;
+            }
+            else if(sa.type == ServerAddress::IPV6Address)
+            {
+                // attempt at hashing the address
+                const uint32_t *addr = static_cast<const uint32_t *>(sa.address.ipv6.netNum);
+                return
+                    (((hash<uint32_t>()(addr[0])
+                    ^ (hash<uint32_t>()(addr[1]) << 1)) >> 1)
+                    ^ (hash<uint32_t>()(addr[2]) << 1)  >> 1)
+                    ^ (hash<uint32_t>()(addr[3]) << 1);
+            }
+#endif // !__LP64__
+           
+            // invalid address type
+            return ~(std::size_t)0;
+        }
+    };
+}; // namespace std
 
 #endif
 

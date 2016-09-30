@@ -48,7 +48,7 @@ bool handleListRequest(tMessageSession &msg)
 	Session			*ps;
 	U8				index;
 	int				i;
-	char			str[16];
+	char			buffer[256];
 
 	
 	/*
@@ -79,10 +79,11 @@ bool handleListRequest(tMessageSession &msg)
 
 	if(checkLogLevel(DPRINT_VERBOSE))
 	{
+		msg.addr->toString(buffer);
 		if(index == 0xFF)
-			printf("Received list query request from %s:%hu\n", msg.addr->toString(str), msg.addr->port);
+			printf("Received list query request from %s:%hu\n", buffer, msg.addr->port);
 		else
-			printf("Received list resend request from %s:%hu\n", msg.addr->toString(str), msg.addr->port);
+			printf("Received list resend request from %s:%hu\n", buffer, msg.addr->port);
 		printf(" [F: %X, S: %X, K: %u, I: %X]\n", msg.header->flags, msg.header->session, msg.header->key, index);
 	}
 

@@ -92,7 +92,7 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 {
 	tcPeerRecordMap::iterator	it;
 	tPeerRecord					*pr;
-	char						str[16];
+	char buffer[256];
 
 
 	// abort on NULL
@@ -103,7 +103,7 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 	*peerrec = NULL;
 
 	// locate the peer record
-	it = m_Records.find(peer.address);
+	it = m_Records.find(peer);
 
 	// handle situtation when record doesn't exist
 	if(it == m_Records.end())
@@ -111,7 +111,7 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 		// create record if allowed to create non-existant records
 		if(createNoExist)
 		{
-			*peerrec = &m_Records[peer.address];
+			*peerrec = &m_Records[peer];
 			pr		 = new tPeerRecord();
 
 			// set peer address, creation and last seen time
@@ -126,8 +126,8 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 			**peerrec = *pr;
 
 			// report record creation
-			debugPrintf(DPRINT_VERBOSE, "FloodControl: Record created for %s\n",
-						(*peerrec)->peer.toString(str));
+			(*peerrec)->peer.toString(buffer);
+			debugPrintf(DPRINT_VERBOSE, "FloodControl: Record created for %s\n", buffer);
 		}
 	} else
 	{
@@ -185,7 +185,7 @@ void FloodControl::DoProcessing(U32 count)
 {
 	tcPeerRecordMap::iterator next;
 	tPeerRecord *peerrec;
-	char str[16];
+	char buffer[256];
 
 
 //CheckMoreRecords:
@@ -211,8 +211,9 @@ void FloodControl::DoProcessing(U32 count)
 		// peer is to be forgotten, last seen time has expired
 
 		// report peer record expired
+		peerrec->peer.toString(buffer);
 		debugPrintf(DPRINT_VERBOSE, "FloodControl: Record expired for %s\n",
-					peerrec->peer.toString(str));
+					buffer);
 
 		next = m_ProcIT;
 		next++;
@@ -260,7 +261,7 @@ bool FloodControl::CheckPeer(ServerAddress &peer, tPeerRecord **peerrec, bool ef
 bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 {
 	S32 ts;
-	char str[16];
+	char buffer[256];
 
 	
 	// abort on NULL
@@ -292,8 +293,9 @@ bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 		peerrec->tsLastSeen		= ts;
 
 		// report unban
-		debugPrintf(DPRINT_INFO, "FloodControl: Unbanned %s:%hu [banned %u times]\n",
-					peerrec->peer.toString(str), peerrec->peer.port, peerrec->bans);
+		peerrec->peer.toString(buffer);
+		debugPrintf(DPRINT_INFO, "FloodControl: Unbanned %s [banned %u times]\n",
+					buffer, peerrec->bans);
 	}
 
 	// now check to see if peer is still banned based on their record
@@ -326,7 +328,7 @@ void FloodControl::RepPeer(ServerAddress &peer, S32 tickets)
 
 void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 {
-	char str[16];
+	char buffer[256];
 
 	
 	// abort on NULL
@@ -350,8 +352,9 @@ void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 	CheckSessions(peerrec, true);
 
 	// report ban
-	debugPrintf(DPRINT_INFO, "FloodControl: Banned %s:%hu [banned %u times]\n",
-				peerrec->peer.toString(str), peerrec->peer.port, peerrec->bans);	
+	peerrec->peer.toString(buffer);
+	debugPrintf(DPRINT_INFO, "FloodControl: Banned %s [banned %u times]\n",
+				buffer, peerrec->bans);	
 }
 
 
