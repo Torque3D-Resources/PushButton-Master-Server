@@ -37,18 +37,11 @@ class ServerAddress
 {
 public:
 	ServerAddress();
-	ServerAddress(ServerAddress *addr);
-	ServerAddress(const char *host, const U16 port);
+	ServerAddress(const ServerAddress *addr);
 	ServerAddress(const netAddress *addr);
 
-//	char* toString() const;
-	char* toString(char *buff) const;
-	void set(const char *host, const U16 port);
-	void set(U32 address, const U16 port)
-	{
-		this->address = address;
-		this->port    = port;
-	}
+	void toString( char outstr[256] );
+	void set(const netAddress *addr);
 
 
 	void putInto(netAddress *a);
@@ -56,14 +49,45 @@ public:
 
 	bool equals(const ServerAddress *a);
 
-	/**
-	 * @brief Quads for addy.
-	 */
+	enum Type
+	{
+		IPAddress,
+		IPV6Address
+	};
+
+	S32 type;
+/* for ref
+
 	union
 	{
 		U32	address;
 		U8	addy[4];
 	};
+	*/
+
+	/**
+	 * @brief Quads for addy.
+	 */
+	 union
+	 {
+	 	struct {
+	 		U32 address;
+	 		U8 netNum[4];
+	 	} ipv4;
+
+	 	struct {
+	 		U8 netNum[16];
+	 		U32 netFlow;
+	 		U32 netScope;
+	 	} ipv6;
+
+	 	struct {
+	 		U8 netNum[16];
+	 		U8 netFlow[4];
+	 		U8 netScope[4];
+	 	} ipv6_raw;
+
+	 } address;
 
 	/**
 	 * @brief Port for addy.

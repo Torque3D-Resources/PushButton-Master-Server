@@ -22,43 +22,16 @@
 */
 
 #include "netSocket.h"
+#include "ServerStore.h"
 
-#if defined(UL_CYGWIN) || !defined (UL_WIN32)
-
-#if defined(UL_MAC_OSX)
-#  include <netinet/in.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <time.h>
-#include <sys/time.h>    /* Need both for Mandrake 8.0!! */
-#include <unistd.h>
-#include <netdb.h>
-#include <fcntl.h>
-
-#else
-
-#include <winsock.h>
-#include <stdarg.h>
-
-#endif
-
-#if defined(UL_MSVC) && !defined(socklen_t)
-#define socklen_t int
-#endif
-
-/* Paul Wiltsey says we need this for Solaris 2.8 */
- 
-#ifndef INADDR_NONE
-#define INADDR_NONE ((unsigned long)-1)
-#endif
-                                                                                               
-netAddress::netAddress ( const char* host, int port )
+netAddress::netAddress ( const sockaddr_storage *inData )
 {
-  set ( host, port ) ;
+  memcpy(&data, inData, sizeof(sockaddr_storage));
+}
+
+netAddress::netAddress ( const ServerAddress *inData )
+{
+  set(inData);
 }
 netAddress::netAddress ( int address, int port )
 {
@@ -66,68 +39,70 @@ netAddress::netAddress ( int address, int port )
 }
 
 
-void netAddress::set ( const char* host, int port )
+void netAddress::set ( const ServerAddress *info )
 {
   memset(this, 0, sizeof(netAddress));
 
-  sin_family = AF_INET ;
-  sin_port = htons (port);
-
-  /* Convert a string specifying a host name or one of a few symbolic
-  ** names to a numeric IP address.  This usually calls gethostbyname()
-  ** to do the work; the names "" and "<broadcast>" are special.
-  */
-
-  if (host[0] == '\0')
-    sin_addr = INADDR_ANY;
-  else
-  if (host[0] == '<' && strcmp(host, "<broadcast>") == 0)
-    sin_addr = INADDR_BROADCAST;
-  else
+  if (info->type == ServerAddress::IPAddress)
   {
-    sin_addr = inet_addr ( host ) ;
+    sockaddr_in *addr = (sockaddr_in*)&data;
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons (info->port);
 
-    if ( sin_addr == INADDR_NONE )
-    {
-      struct hostent *hp = gethostbyname ( host ) ;
-
-      if ( hp != NULL )
-      	memcpy ( (char *) &sin_addr, hp->h_addr, hp->h_length ) ;
-      else
-      {
-        perror ( "netAddress::set" ) ;
-        sin_addr = INADDR_ANY ;
-      }
-    }
+    uint8_t *addrNum = (uint8_t*)&addr->sin_addr;
+    addrNum[0] = info->address.ipv4.netNum[0];
+    addrNum[1] = info->address.ipv4.netNum[1];
+    addrNum[2] = info->address.ipv4.netNum[2];
+    addrNum[4] = info->address.ipv4.netNum[3];
+  }
+  else if (info->type == ServerAddress::IPV6Address)
+  {
+    sockaddr_in6 *addr = (sockaddr_in6*)&data;
+    addr->sin6_family = AF_INET6;
+    addr->sin6_port = htons (info->port);
+    addr->sin6_flowinfo = info->address.ipv6.netFlow;
+    addr->sin6_scope_id = info->address.ipv6.netScope;
+    memcpy(&addr->sin6_addr, info->address.ipv6.netNum, sizeof(info->address.ipv6.netNum));
   }
 }
 
-void netAddress::set ( int address, int port )
+void netAddress::set ( const char *inStr, bool hostLookup )
 {
+  struct addrinfo hint, *res = NULL;
   memset(this, 0, sizeof(netAddress));
+  memset(&hint, 0, sizeof(hint));
 
-  sin_family = AF_INET ;
-  sin_addr = address; //htonl (address);
-  sin_port = htons (port);
+  hint.ai_family = AF_UNSPEC;
+  hint.ai_flags = hostLookup ? 0 : AI_NUMERICHOST;
+
+  if (getaddrinfo(inStr, NULL, &hint, &res) == 0)
+  {
+    if (res->ai_family == AF_INET)
+      memcpy(&data, res->ai_addr, sizeof(sockaddr_in));
+    else if (res->ai_family == AF_INET6)
+      memcpy(&data, res->ai_addr, sizeof(sockaddr_in6));
+  }
 }
 
+void netAddress::setPort ( int port )
+{
+  sockaddr_in *socketAddr = (sockaddr_in*)&data;
+  sockaddr_in6 *socketAddr6 = (sockaddr_in6*)&data;
+
+  if (socketAddr->sin_family == AF_INET)
+    socketAddr->sin_port = htons(port);
+  else if (socketAddr->sin_family == AF_INET6)
+    socketAddr6->sin6_port = htons(port);
+}
 
 /* Create a string object representing an IP address.
    This is always a string of the form 'dd.dd.dd.dd' (with variable
    size numbers). */
 
-const char* netAddress::getHost () const
+void netAddress::getHost (char outStr[256]) const
 {
-#if 0
-  const char* buf = inet_ntoa ( sin_addr ) ;
-#else
-  static char buf [32];
-	long x = ntohl(sin_addr);
-	sprintf(buf, "%d.%d.%d.%d",
-		(int) (x>>24) & 0xff, (int) (x>>16) & 0xff,
-		(int) (x>> 8) & 0xff, (int) (x>> 0) & 0xff );
-#endif
-  return buf;
+  outStr[0] = '\0';
+  inet_ntop(data.ss_family, &data, outStr, 256);
 }
 
 
@@ -138,37 +113,75 @@ int netAddress::getAddress() const
 
 int netAddress::getPort() const
 {
-  return ntohs(sin_port);
+  const sockaddr_in *socketAddr = (const sockaddr_in*)&data;
+  const sockaddr_in6 *socketAddr6 = (const sockaddr_in6*)&data;
+
+  if (socketAddr->sin_family == AF_INET)
+    return ntohs(socketAddr->sin_port);
+  else if (socketAddr->sin_family == AF_INET6)
+    return ntohs(socketAddr6->sin6_port);
+  else
+    return 0;
 }
 
-
-const char* netAddress::getLocalHost ()
+bool netAddress::getLocalHost (int family, netAddress *out)
 {
-  //gethostbyname(gethostname())
-
-  char buf[256];
-  memset(buf, 0, sizeof(buf));
-  gethostname(buf, sizeof(buf)-1);
-  const hostent *hp = gethostbyname(buf);
-
-  if (hp && *hp->h_addr_list)
-  {
-    in_addr     addr = *((in_addr*)*hp->h_addr_list);
-    const char* host = inet_ntoa(addr);
-
-    if ( host )
-      return host ;
-  }
-
-  return "127.0.0.1" ;
+  // TODO: getaddrinfo
+  return false;
 }
-
 
 bool netAddress::getBroadcast () const
 {
-  return sin_addr == INADDR_BROADCAST;
+  const sockaddr_in *socketAddr = (const sockaddr_in*)&data;
+  const uint32_t broadcastIP = INADDR_BROADCAST;
+  return socketAddr->sin_family == AF_INET && memcmp(&socketAddr->sin_addr, &broadcastIP, sizeof(broadcastIP)) == 0;
 }
 
+int netAddress::getFamily () const
+{
+  const sockaddr_in *socketAddr = (const sockaddr_in*)&data;
+  return socketAddr->sin_family;
+}
+
+int netAddress::getDataSize() const
+{
+  return data.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+}
+
+const void* netAddress::getData() const
+{
+  return &data;
+}
+
+void netAddress::toString(char outStr[256]) const
+{
+  if (data.ss_family == AF_INET)
+  {
+    const sockaddr_in *socketAddr = (const sockaddr_in*)&data;
+    char buffer[128];
+    inet_ntop(AF_INET, (sockaddr*)(&data), buffer, sizeof(buffer));
+
+    if (socketAddr->sin_port == 0)
+      snprintf(outStr, 256, "%s", buffer);
+    else
+      snprintf(outStr, 256, "%s:%i", buffer, ntohs(socketAddr->sin_port));
+  }
+  else if (data.ss_family == AF_INET6)
+  {
+    const sockaddr_in6 *socketAddr6 = (const sockaddr_in6*)&data;
+    char buffer[128];
+    inet_ntop(AF_INET6, (sockaddr*)(&data), buffer, sizeof(buffer));
+
+    if (socketAddr6->sin6_port == 0)
+      snprintf(outStr, 256, "%s", buffer);
+    else
+      snprintf(outStr, 256, "[%s]:%i", buffer, ntohs(socketAddr6->sin6_port));
+  }
+  else
+  {
+    outStr[0] = '\0';
+  }
+}
 
 netSocket::netSocket ()
 {
@@ -242,11 +255,10 @@ void netSocket::setBroadcast ( bool broadcast )
 }
 
 
-int netSocket::bind ( const char* host, int port )
+int netSocket::bind ( const netAddress* bindAddress )
 {
   assert ( handle != -1 ) ;
-  netAddress addr ( host, port ) ;
-  return ::bind(handle,(const sockaddr*)&addr,sizeof(netAddress));
+  return ::bind(handle,(const sockaddr*)bindAddress,sizeof(netAddress));
 }
 
 
@@ -257,7 +269,7 @@ int netSocket::listen ( int backlog )
 }
 
 
-int netSocket::accept ( netAddress* addr )
+int netSocket::accept ( const netAddress* addr )
 {
   assert ( handle != -1 ) ;
 
@@ -273,14 +285,13 @@ int netSocket::accept ( netAddress* addr )
 }
 
 
-int netSocket::connect ( const char* host, int port )
+int netSocket::connect ( const netAddress *addr )
 {
   assert ( handle != -1 ) ;
-  netAddress addr ( host, port ) ;
-  if ( addr.getBroadcast() ) {
+  if ( addr->getBroadcast() ) {
       setBroadcast( true );
   }
-  return ::connect(handle,(const sockaddr*)&addr,sizeof(netAddress));
+  return ::connect(handle,(const sockaddr*)(addr->getData()),addr->getDataSize());
 }
 
 

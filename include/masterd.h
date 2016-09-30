@@ -23,6 +23,8 @@
 
 #include "commonTypes.h"
 
+class ServerStore;
+
 // Some configuration
 #define HAVE_SQLITE
 

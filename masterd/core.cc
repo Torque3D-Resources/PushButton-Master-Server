@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "masterd.h"
 #include "TorqueIO.h"
 #include "SessionHandler.h"
+#include "netSocket.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -342,7 +343,7 @@ void MasterdCore::RunThread(void)
 	ServerAddress *addr;
 	Packet *data;
 	tPeerRecord *peerrec;
-	char str[16];
+	char buffer[256];
 	
 	
 	// print welcome message
@@ -362,8 +363,14 @@ void MasterdCore::RunThread(void)
 	initNetworkLib();
 
 	// create and bind to socket
-	debugPrintf(DPRINT_INFO, " - Binding master server to %s:%u\n", m_Prefs.address, m_Prefs.port);
-	gm_pTransport = new MasterdTransport(m_Prefs.address, (U16)m_Prefs.port);
+	netAddress bindAddress;
+	bindAddress.set(m_Prefs.address, false);
+	bindAddress.setPort(m_Prefs.port);
+	bindAddress.toString(buffer);
+
+	debugPrintf(DPRINT_INFO, " - Binding master server to %s\n", buffer);
+	gm_pTransport = new MasterdTransport(&bindAddress);
+
 	if(!gm_pTransport->GetStatus())
 	{
 		debugPrintf(DPRINT_ERROR, " - Bind failed, aborting!\n");
@@ -438,8 +445,8 @@ void MasterdCore::ProcMessage(ServerAddress *addr, Packet *data, tPeerRecord *pe
 {
 	tMessageSession	message;
 	tPacketHeader	header;
-	char str[16];
 	bool result;
+	char buffer[256];
 
 	
 	// setup message structure, we use this instead of passing along all these
@@ -462,15 +469,21 @@ void MasterdCore::ProcMessage(ServerAddress *addr, Packet *data, tPeerRecord *pe
 BadRepPeer:
 
 		// report bad message header from peer
-		debugPrintf(DPRINT_VERBOSE, "Received bad packet from %s:%hu\n",
-					addr->toString(str), addr->port);
+        addr->toString(buffer);
+		debugPrintf(DPRINT_VERBOSE, "Received bad packet from %s\n", buffer);
 
 		// increase bad reputation for peer
 		gm_pFloodControl->RepPeer(peerrec, m_Prefs.floodBadMsgTicket);
 		return;
 	}
 
-	debugPrintf(DPRINT_VERBOSE, "[%s:%hu]: ", addr->toString(str), addr->port);
+	// is global configuration pointer set?
+	if(gm_pConfig && DPRINT_VERBOSE <= (int)gm_pConfig->verbosity)
+	{
+		addr->toString(buffer);
+		debugPrintf(DPRINT_VERBOSE, "[%s]: ", buffer);
+		delete[] str;
+	}
 
 	// handle the specific message type
 	switch(header.type)

@@ -349,9 +349,7 @@ public:
 	UniqueStringList	m_GameTypes;
 	UniqueStringList	m_MissionTypes;
 
-
-	virtual ~ServerStore() {}
-
+	virtual ~ServerStore() {;}
 	
 	// Work functions
 	virtual void DoProcessing(int count = 5) = 0;

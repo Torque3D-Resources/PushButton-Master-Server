@@ -21,6 +21,7 @@
 #include "internal.h"
 #include "MasterdTransport.h"
 #include "masterd.h"
+#include "netSocket.h"
 
 
 /**
@@ -32,7 +33,7 @@
  * @param host	Either a host, or a blank string. A blank string will cause the transport to guess at localhost.
  * @param port	Port number to use. 28002 is a good default.
  */
-MasterdTransport::MasterdTransport( char * host, short port)
+MasterdTransport::MasterdTransport( const netAddress* bindAddress )
 {
 	int result;
 	
@@ -42,7 +43,7 @@ MasterdTransport::MasterdTransport( char * host, short port)
 	
 	this->sock = new netSocket();
 	this->sock->open(false);
-	result = this->sock->bind(host, port);
+	result = this->sock->bind(bindAddress);
 	if(result < 0)
 	{
 		// we failed to bind, usual causes are address and/or port already in use

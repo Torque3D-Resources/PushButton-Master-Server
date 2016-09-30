@@ -25,6 +25,7 @@
 #include <poll.h>
 
 class netSocket;
+class netAddress;
 
 /**
  * @brief A simple wrapper class to abstract networking details.
@@ -55,7 +56,7 @@ private:
 	nfds_t pfdCount;			// poll() FD count
 
 public:
-	MasterdTransport(char * host, short port);
+	MasterdTransport(const netAddress *bindAddtress);
 	~MasterdTransport();
 
 	bool GetStatus(void) const { return sockOK; }
