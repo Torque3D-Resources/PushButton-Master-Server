@@ -23,6 +23,7 @@
 
 #include "network.h"
 #include <poll.h>
+#include <vector>
 
 class netSocket;
 class netAddress;
@@ -41,6 +42,8 @@ class netAddress;
  */
 class MasterdTransport {
 private:
+	static const int MAX_LISTEN_SOCKETS = 2;
+
 	/**
 	 * @brief Implementation detail.
 	 *
@@ -49,17 +52,18 @@ private:
 	 * If you wanted to provide a different implementation of
 	 * this class, you'd need to replace this.
 	 */
-	netSocket * sock;
+	netSocket * sock[MAX_LISTEN_SOCKETS];
 	bool		sockOK;
 
-	struct pollfd pfdArray[1];	// we're only working with one socket
+	struct pollfd pfdArray[MAX_LISTEN_SOCKETS];	// we're only working with one socket
 	nfds_t pfdCount;			// poll() FD count
 
 public:
-	MasterdTransport(const netAddress *bindAddtress);
+	MasterdTransport( std::vector<netAddress> &listenAddresses );
 	~MasterdTransport();
 
 	bool GetStatus(void) const { return sockOK; }
+	bool checkSockets(Packet ** data, ServerAddress ** from);
 	bool poll(Packet ** data, ServerAddress ** from, int timeout);
 	void sendPacket(Packet * data, ServerAddress * to);
 };

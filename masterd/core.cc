@@ -117,6 +117,18 @@ void sigproc(int sig)
 // utility functions
 //-----------------------------------------------------------------------------
 
+bool shouldDebugPrintf(const int level)
+{
+	if(gm_pConfig)
+	{
+		// yes, now filter for verbosity level
+		if(level > (int)gm_pConfig->verbosity)
+			return false; // message level too high, abort
+	}
+
+	return true;
+}
+
 void debugPrintf(const int level, const char *format, ...)
 {
 	va_list args;
@@ -364,12 +376,15 @@ void MasterdCore::RunThread(void)
 
 	// create and bind to socket
 	netAddress bindAddress;
-	bindAddress.set(m_Prefs.address, false);
-	bindAddress.setPort(m_Prefs.port);
-	bindAddress.toString(buffer);
+	std::vector<netAddress> bindAddresses;
+	for (int i=0; i<m_Prefs.address.size(); i++)
+	{
+		bindAddress.set(m_Prefs.address[i], false);
+		if (bindAddress.getPort() == 0) bindAddress.setPort(m_Prefs.port);
+		bindAddresses.push_back(bindAddress);
+	}
 
-	debugPrintf(DPRINT_INFO, " - Binding master server to %s\n", buffer);
-	gm_pTransport = new MasterdTransport(&bindAddress);
+	gm_pTransport = new MasterdTransport(bindAddresses);
 
 	if(!gm_pTransport->GetStatus())
 	{
@@ -388,6 +403,80 @@ void MasterdCore::RunThread(void)
 	// report we're starting the core loop
 	debugPrintf(DPRINT_INFO, " - Entering core loop.\n");
 
+	if (m_Prefs.testingMode)
+	{
+		const U32 dummyIpv4Count = 255 * 128;
+		const U32 dummyIpv6Count = 255 * 128;
+		const U32 dummyServerCount = dummyIpv4Count + dummyIpv6Count;
+
+		debugPrintf(DPRINT_INFO, " - Adding %i dummy servers.\n", dummyServerCount);
+
+		ServerInfo info;
+		ServerAddress serverAddr;
+
+		const char *gameType = "TEST";
+		const char *missionType = "NORMAL";
+		info.gameType = new char[strlen(gameType)+1];
+		info.missionType = new char[strlen(missionType)+1];
+
+		strcpy(info.gameType, gameType);
+		strcpy(info.missionType, missionType);
+
+		info.testServer = true;
+
+		// Add IPV4
+		serverAddr.type = ServerAddress::IPAddress;
+		serverAddr.port = 28022;
+		serverAddr.address.ipv4.netNum[0] = 192;
+		serverAddr.address.ipv4.netNum[1] = 168;
+		serverAddr.address.ipv4.netNum[2] = 80;
+		serverAddr.address.ipv4.netNum[3] = 0;
+
+		for (int i=0; i<dummyIpv4Count; i++)
+		{
+			gm_pStore->UpdateServer(&serverAddr, &info);
+
+			serverAddr.port += 1;
+			if (serverAddr.port > 28022+255)
+			{
+				serverAddr.port = 28022;
+				serverAddr.address.ipv4.netNum[3]++;
+			}
+
+			if (serverAddr.address.ipv4.netNum[3] == 255)
+			{
+				serverAddr.address.ipv4.netNum[3] = 0;
+				serverAddr.address.ipv4.netNum[2]++;
+			}
+		}
+
+		// Add IPV6
+		serverAddr.type = ServerAddress::IPV6Address;
+		serverAddr.port = 28022;
+		memset(serverAddr.address.ipv6.netNum, '\0', sizeof(serverAddr.address.ipv6.netNum));
+		serverAddr.address.ipv6.netNum[0] = 0x20;
+		serverAddr.address.ipv6.netNum[1] = 0x1;
+		serverAddr.address.ipv6.netNum[2] = 0x0D;
+		serverAddr.address.ipv6.netNum[3] = 0xB8;
+		serverAddr.address.ipv6.netNum[15] = 0x1;
+		for (int i=0; i<dummyIpv6Count; i++)
+		{
+			gm_pStore->UpdateServer(&serverAddr, &info);
+
+			serverAddr.port += 1;
+			if (serverAddr.port > 28022+255)
+			{
+				serverAddr.port = 28022;
+				serverAddr.address.ipv6.netNum[15]++;
+			}
+
+			if (serverAddr.address.ipv6.netNum[15] == 255)
+			{
+				serverAddr.address.ipv6.netNum[15] = 0;
+				serverAddr.address.ipv6.netNum[14]++;
+			}
+		}
+	}
 
 	// socket message handling, loop until thread is stop flagged
 	while(m_RunThread)
@@ -404,8 +493,7 @@ void MasterdCore::RunThread(void)
 			if(!gm_pFloodControl->CheckPeer(*addr, &peerrec, true))
 			{
 				// bad reputation, ignore peer
-				addr->toString(buffer);
-				debugPrintf(DPRINT_DEBUG, "Dropped packet from banned host %s\n", buffer);
+				debugPrintf(DPRINT_DEBUG, "Dropped packet from banned host %s\n", addr->toString(buffer));
 				goto SkipPeerMsg;
 			}
 			
@@ -470,8 +558,10 @@ void MasterdCore::ProcMessage(ServerAddress *addr, Packet *data, tPeerRecord *pe
 BadRepPeer:
 
 		// report bad message header from peer
-        addr->toString(buffer);
-		debugPrintf(DPRINT_VERBOSE, "Received bad packet from %s\n", buffer);
+		if(shouldDebugPrintf(DPRINT_VERBOSE))
+		{
+			debugPrintf(DPRINT_VERBOSE, "Received bad packet from %s\n", addr->toString(buffer));
+		}
 
 		// increase bad reputation for peer
 		gm_pFloodControl->RepPeer(peerrec, m_Prefs.floodBadMsgTicket);
@@ -479,10 +569,9 @@ BadRepPeer:
 	}
 
 	// is global configuration pointer set?
-	if(gm_pConfig && DPRINT_VERBOSE <= (int)gm_pConfig->verbosity)
+	if(shouldDebugPrintf(DPRINT_VERBOSE))
 	{
-		addr->toString(buffer);
-		debugPrintf(DPRINT_VERBOSE, "[%s]: ", buffer);
+		debugPrintf(DPRINT_VERBOSE, "[%s]: ", addr->toString(buffer));
 	}
 
 	// handle the specific message type
@@ -558,7 +647,7 @@ void MasterdCore::InitPrefs(void)
 		{	CONFIG_TYPE_STR,	&m_Prefs.region,	"region",
 			"Region the Master Server is in. Default: \"Earth\""
 		},
-		{	CONFIG_TYPE_STR,	&m_Prefs.address,	"address",
+		{	CONFIG_TYPE_STR_VECTOR,	&m_Prefs.address,	"address",
 			"IPv4 address that the Daemon listens and sends on. Default: \"0.0.0.0\" for All\n"
 			"NOTE: IPv6 currently not supported."
 		},
@@ -623,6 +712,9 @@ void MasterdCore::InitPrefs(void)
 			"unknown formatted packets.\n"
 			"Default: 50"
 		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.testingMode,		"testingMode",
+			"Enable testing mode\n"
+		},
 
 		{ CONFIG_TYPE_NOTSET, NULL, NULL } // End of entities
 	};
@@ -631,14 +723,14 @@ void MasterdCore::InitPrefs(void)
 	m_ConfigEntities = entities;
 
 	// clean preferences structure
-	memset(&m_Prefs, 0, sizeof(m_Prefs));
+	m_Prefs.reset();
 	
 	// set preference variables' default values
 	strcpy(m_Prefs.file,	"./masterd.prf");	// set preferences file path and name
 	strcpy(m_Prefs.pidfile,	"./masterd.pid");	// set process id file path and name
 	strcpy(m_Prefs.name,	"PBMS");			// set name
 	strcpy(m_Prefs.region,	"Earth");			// set region
-	strcpy(m_Prefs.address,	"0.0.0.0");			// set bind address to ALL
+	m_Prefs.address.push_back(strdup("0.0.0.0"));
 	m_Prefs.port				= 28002;		// set bind UDP port to standard
 	m_Prefs.heartbeat			= 180;			// set heartbeat to 3 minutes
 	m_Prefs.verbosity			= 4;			// set verbosity to All Messages
@@ -695,6 +787,7 @@ void MasterdCore::LoadPrefs(void)
 
 	// success on opening preferences file, now load it
 	debugPrintf(DPRINT_INFO, " - Loading preference file.\n");
+	m_Prefs.address.clear();
 
 	// process the preferences file
 	while(fin.good())
@@ -759,6 +852,26 @@ SkipToNext:
 					// store string
 					memcpy(pfe->pData, pValue, len);
 					((char *)pfe->pData)[len] = 0;
+					
+					break;
+				}
+				case CONFIG_TYPE_STR_VECTOR:
+				{
+					// ensure string to be stored isn't larger than our storage
+					len = strlen(pValue);
+					if(len > 255)
+					{
+						len = 255;
+						debugPrintf(DPRINT_WARN, " - Warning: config variable %s value has been truncated for being too large.\n",
+								pLine);
+					}
+
+					// store string
+					std::vector<char*> *vec = (std::vector<char*>*)pfe->pData;
+					char buf[256];
+					memcpy(buf, pValue, len);
+					buf[len] = 0;
+					vec->push_back(strdup(buf));
 					
 					break;
 				}
@@ -868,7 +981,18 @@ void MasterdCore::CreatePrefs(void)
 		if(pfe->type == CONFIG_SECTION)
 		{
 			fout << CONFIG_LINE_COMMENTCHAR << strSection;
-		} else
+		}
+		else if (pfe->type == CONFIG_TYPE_STR_VECTOR)
+		{
+			std::vector<char*> &list  = *((std::vector<char*> *)pfe->pData);
+			for (int i=0; i<list.size(); i++)
+			{
+				fout << CONFIG_LINE_VARSTART << pfe->pName << " ";
+				fout << "\"" << list[i] << "\"";
+				fout << endl;
+			}
+		}
+		else
 		{
 			// write variable name
 			fout << CONFIG_LINE_VARSTART << pfe->pName << " ";

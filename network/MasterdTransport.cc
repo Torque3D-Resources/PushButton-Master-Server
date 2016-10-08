@@ -33,33 +33,51 @@
  * @param host	Either a host, or a blank string. A blank string will cause the transport to guess at localhost.
  * @param port	Port number to use. 28002 is a good default.
  */
-MasterdTransport::MasterdTransport( const netAddress* bindAddress )
+MasterdTransport::MasterdTransport( std::vector<netAddress> &listenAddresses )
 {
 	int result;
+	char buffer[256];
 	
 	
 	pfdCount = 0;
 	sockOK   = false;
+
+	memset(sock, '\0', sizeof(sock));
+	memset(pfdArray, '\0', sizeof(pfdArray));
 	
-	this->sock = new netSocket();
-	this->sock->open(false);
-	result = this->sock->bind(bindAddress);
-	if(result < 0)
+	for (int i=0; i<listenAddresses.size(); i++)
 	{
-		// we failed to bind, usual causes are address and/or port already in use
-		debugPrintf(DPRINT_ERROR, "   Failed to bind to socket, error: [%d] %s\n",
-					errno, strerror(errno));
-		return;
+		if (pfdCount >= MAX_LISTEN_SOCKETS)
+		{
+			debugPrintf(DPRINT_ERROR, " - Can't bind to %s, ran out of sockets\n", listenAddresses[i].toString(buffer));
+			break;
+		}
+
+		netSocket *socket = new netSocket();
+		socket->open(listenAddresses[i].getFamily() == AF_INET6, false);
+		result = socket->bind(&listenAddresses[i]);
+		if(result < 0)
+		{
+			// we failed to bind, usual causes are address and/or port already in use
+			debugPrintf(DPRINT_ERROR, " - Failed to bind to %s, error: [%d] %s\n",
+						listenAddresses[i].toString(buffer), errno, strerror(errno));
+			delete socket;
+			sock[pfdCount] = NULL;
+			continue;
+		}
+
+		debugPrintf(DPRINT_INFO, " - Binding master server to %s\n", listenAddresses[i].toString(buffer));
+		sock[pfdCount] = socket;
+
+		// prepare the poll file descriptor test array
+		pfdArray[pfdCount].fd     = socket->getHandle();	// assign our socket to polling array entity
+		pfdArray[pfdCount].events = POLLIN;						// we want only the recvfrom() ready event
+		
+		pfdCount++;
 	}
 
-	// prepare the poll file descriptor test array
-	pfdArray[pfdCount].fd     = this->sock->getHandle();	// assign our socket to polling array entity
-	pfdArray[pfdCount].events = POLLIN;						// we want only the recvfrom() ready event
-	
-	pfdCount++;
-
 	// we're done and ready for use
-	sockOK = true;
+	sockOK = pfdCount > 0;
 }
 
 
@@ -70,9 +88,41 @@ MasterdTransport::MasterdTransport( const netAddress* bindAddress )
  */
 MasterdTransport::~MasterdTransport()
 {
-	delete this->sock;
+	for (int i=0; i<MAX_LISTEN_SOCKETS; i++)
+	{
+		if (sock[i])
+			delete sock[i];
+	}
 }
 
+bool MasterdTransport::checkSockets(Packet **data, ServerAddress **from)
+{
+	char buff[2500];
+	netAddress from_x;
+	int len;
+
+	for (int i=0; i<pfdCount; i++)
+	{
+		if(pfdArray[i].revents & POLLIN)
+		{
+			
+			// Read in a packet.... if we have one.
+			if(
+				(len=sock[i]->recvfrom(buff, 2500, 0, &from_x))
+				> 0)
+			{
+				*from = new ServerAddress(&from_x, i);
+				*data = new Packet(buff, len);
+
+				pfdArray[i].revents = 0;
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 /**
  * @brief Poll for packets.
@@ -96,31 +146,21 @@ MasterdTransport::~MasterdTransport()
 bool MasterdTransport::poll(Packet **data, ServerAddress **from, int timeout)
 {
 	// Check for packets
-
-	char buff[2500];
-	netAddress from_x;
-	int len, result;
-
+	int result;
 
 	// since function won't return false because of recvfrom() this
 	// next section of code will use UNIX poll() to know when the
 	// socket actually has anything. --TRON
 
+	if (checkSockets(data, from))
+		return true;
+
 	// perform the actual polling with a blocking timeout
 	result = ::poll(&pfdArray[0], pfdCount, timeout);
-	if((result > 0) && (pfdArray[0].revents & POLLIN))
+	if (result > 0)
 	{
-		
-		// Read in a packet.... if we have one.
-		if(
-			(len=this->sock->recvfrom(buff, 2500, 0, &from_x))
-			> 0)
-		{
-			*from = new ServerAddress(&from_x);
-			*data = new Packet(buff, len);
-
+		if (checkSockets(data, from))
 			return true;
-		}
 	}
 
 	*from = NULL;
@@ -138,7 +178,10 @@ bool MasterdTransport::poll(Packet **data, ServerAddress **from, int timeout)
  */
 void MasterdTransport::sendPacket(Packet *data, ServerAddress *to)
 {
+	char buffer[256];
 	netAddress naddr(to);
-	this->sock->sendto(data->getBufferPtr(), (int)data->getLength(), 0, &naddr);
+	assert(to->socket >= 0 && to->socket < MAX_LISTEN_SOCKETS);
+	printf("sendPacket to socket %i (%s)\n", to->socket, naddr.toString(buffer));
+	sock[to->socket]->sendto(data->getBufferPtr(), (int)data->getLength(), 0, &naddr);
 }
 

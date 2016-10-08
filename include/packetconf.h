@@ -49,29 +49,6 @@
  */
 #define LIST_PACKET_HEADER		12
 
-/**
- * @brief Size of a single server element in a packet.
- *
- * 4 bytes/ip, 2 bytes/port
- */
-#define LIST_PACKET_SERVER_SIZE	6
-
-/**
- * @brief Helper calculations for the max server calculations.
- *
- * This calculates the theoretical max.
- */
-#define LIST_PACKET_MAX_SERVERS_	((int)((LIST_PACKET_SIZE - LIST_PACKET_HEADER) / LIST_PACKET_SERVER_SIZE))
-
-/**
- * @brief Actual max servers number for list packets.
- *
- * We cap the number of servers/packet at 254 due to U8 constraints. (see sendListResponse)
- *
- * Since the theoretical max could be higher.
- */
-#define LIST_PACKET_MAX_SERVERS	(LIST_PACKET_MAX_SERVERS_ > 254 ? 254 : LIST_PACKET_MAX_SERVERS_)
-
 // packet's header size in bytes
 #define PACKET_HEADER_SIZE	6
 

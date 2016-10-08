@@ -25,6 +25,7 @@
 #include <list>
 #include <vector>
 #include "commonTypes.h"
+#include "packetconf.h"
 
 // expire the game client query session after 15 seconds since last activity
 #define SESSION_EXPIRE_TIME		15
@@ -32,19 +33,29 @@
 // maximum number of sessions per peer / remote host at the same time
 #define SESSION_MAX				10
 
-
-typedef struct tServerAddress
+struct ServerResultPacket
 {
-	U32		address;
-	U16		port;
-} tServerAddress;
+	U16 size;
+	U8 data[LIST_PACKET_SIZE];
 
-typedef std::vector<tServerAddress> tcServerAddrVector;
+	inline U16 getNumServers() { return *((U16*)data); }
+};
 
+typedef std::vector<ServerResultPacket> tcServerAddrVector;
 
 class Session
 {
 public:
+
+	enum // Query Flags
+	{
+		OnlineQuery       = 0,        // Authenticated with master
+		OfflineQuery      = 1,   // On our own
+		NoStringCompress  = 1<<1,
+		NewStyleResponse = 1<<2   // Send new style packet response (with ipv6 & such)
+	};
+
+
 	U16						session;		// associated session identifier
 	U16						key;			// associated key
 	S32						lastUsed;		// last time this session was used
@@ -52,16 +63,17 @@ public:
 	tcServerAddrVector		results;		// associated server query results
 	U16						total;			// total number of servers
 	U8						packTotal;		// total number of packets
-	U16						packNum;		// number of servers per packet
-	U16						packLast;		// number of servers on last packet
 
-	Session(U16 session, U16 key)
+	U8 sessionFlags; // flags for session transmission data
+
+	Session(U16 session, U16 key, U8 flags)
 	{
 //		printf("DEBUG: session object born: %X\n", this);
 		
 		this->session	= session;
 		this->key		= key;
 		this->lastUsed	= getAbsTime();
+		this->sessionFlags = flags;
 	}
 	~Session()
 	{

@@ -126,8 +126,10 @@ void FloodControl::GetPeerRecord(tPeerRecord **peerrec, ServerAddress &peer, boo
 			**peerrec = *pr;
 
 			// report record creation
-			(*peerrec)->peer.toString(buffer);
-			debugPrintf(DPRINT_VERBOSE, "FloodControl: Record created for %s\n", buffer);
+			if(shouldDebugPrintf(DPRINT_VERBOSE))
+			{
+				debugPrintf(DPRINT_VERBOSE, "FloodControl: Record created for %s\n", (*peerrec)->peer.toString(buffer));
+			}
 		}
 	} else
 	{
@@ -211,9 +213,11 @@ void FloodControl::DoProcessing(U32 count)
 		// peer is to be forgotten, last seen time has expired
 
 		// report peer record expired
-		peerrec->peer.toString(buffer);
-		debugPrintf(DPRINT_VERBOSE, "FloodControl: Record expired for %s\n",
-					buffer);
+		if(shouldDebugPrintf(DPRINT_VERBOSE))
+		{
+			debugPrintf(DPRINT_VERBOSE, "FloodControl: Record expired for %s\n",
+						peerrec->peer.toString(buffer));
+		}
 
 		next = m_ProcIT;
 		next++;
@@ -293,9 +297,11 @@ bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 		peerrec->tsLastSeen		= ts;
 
 		// report unban
-		peerrec->peer.toString(buffer);
-		debugPrintf(DPRINT_INFO, "FloodControl: Unbanned %s [banned %u times]\n",
-					buffer, peerrec->bans);
+		if(shouldDebugPrintf(DPRINT_VERBOSE))
+		{
+			debugPrintf(DPRINT_VERBOSE, "FloodControl: Unbanned %s [banned %u times]\n",
+						peerrec->peer.toString(buffer), peerrec->bans);
+		}
 	}
 
 	// now check to see if peer is still banned based on their record
@@ -352,9 +358,11 @@ void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 	CheckSessions(peerrec, true);
 
 	// report ban
-	peerrec->peer.toString(buffer);
-	debugPrintf(DPRINT_INFO, "FloodControl: Banned %s [banned %u times]\n",
-				buffer, peerrec->bans);	
+	if(shouldDebugPrintf(DPRINT_INFO))
+	{
+		debugPrintf(DPRINT_INFO, "FloodControl: Banned %s [banned %u times]\n",
+					peerrec->peer.toString(buffer), peerrec->bans);
+	}
 }
 
 
@@ -371,7 +379,7 @@ void FloodControl::CreateSession(tPeerRecord *peerrec, tPacketHeader *header, Se
 	}
 
 	// create new session
-	*session = new Session(header->session, header->key);
+	*session = new Session(header->session, header->key, header->flags);
 
 	// keep track of session
 	peerrec->sessions.push_back(*session);
@@ -407,4 +415,5 @@ bool FloodControl::GetSession(tPeerRecord *peerrec, tPacketHeader *header, Sessi
 	// done
 	return (*session == NULL);
 }
+
 

@@ -196,6 +196,26 @@ public:
 class ServerFilter
 {
 public:
+
+
+	enum // Filter flags
+	{
+		Dedicated = 0x1,
+		NotPassworded = 0x2,
+		Linux = 0x2,
+
+		CurrentVersion = 0x80
+	};
+
+	enum // Region mask address flags
+	{
+		// The following are fixed by the master server regardless of what the server sends. If neither are set, the server will force IsIPV4 to be true, and IsIPV6 also if this is a new-style response.
+		RegionIsIPV4Address = 0x40000000, // bit 31
+		RegionIsIPV6Address = 0x80000000,  // bit 32
+
+		RegionAddressMask = RegionIsIPV4Address | RegionIsIPV6Address
+	};
+
 	char	*gameType;			// game type string
 	char	*missionType;		// mission type string
 	U32		*buddyList;			// pointer to buddy array
@@ -221,37 +241,6 @@ public:
 		if(gameType)	delete[] gameType;
 		if(buddyList)	delete[] buddyList;
 	}
-};
-
-/**
- * @brief ServerResults store results from queries.
- *
- * They are also stored by the Session tracker so we can resend.
- */
-class ServerResults
-{
-public:
-	ServerResults()
-	{
-		next = NULL;
-	}
-
-	void dealloc()
-	{
-		// We don't want to recurse in the destructor, so we iterate
-		ServerResults * cur = this->next, *tmp;
-
-		while(cur)
-		{
-			tmp = cur->next;
-			delete cur;
-			cur = tmp;
-		}
-	}
-
-	int count;					// Number of items in this chunk
-	ServerAddress server[LIST_PACKET_MAX_SERVERS];
-	ServerResults * next;		// And a pointer to the next set of data.
 };
 
 /**
@@ -282,6 +271,8 @@ public:
 	int  last_heart;	// Last time we got a heart beat
 	int  last_info;	// Last time we got info from them
 	bool m_DestroyPlayers;
+	bool testServer;
+	bool ownsStrings;
 
 	ServerInfo(bool destroyPlayers = true)
 	{
@@ -301,12 +292,17 @@ public:
 		last_info	= 0;
 		
 		m_DestroyPlayers = destroyPlayers;
+		testServer = false;
+		ownsStrings = true;
 	}
 
 	~ServerInfo()
 	{
-		if(missionType)	delete[] missionType;
-		if(gameType)	delete[] gameType;
+		if (ownsStrings)
+		{
+			if(missionType)	delete[] missionType;
+			if(gameType)	delete[] gameType;
+		}
 
 		// only destroy players GUID array if requested to
 		if(m_DestroyPlayers && playerList)
@@ -318,30 +314,6 @@ public:
 		m_DestroyPlayers = players;
 	}
 };
-
-
-class Server
-{
-	public:
-	Server()
-	{
-		vInfo = new ServerInfo();
-		vAddress = new ServerAddress();
-	};
-	~Server()
-	{
-		delete vAddress;
-		delete vInfo;
-	};
-	ServerAddress *vAddress;
-	ServerInfo *vInfo;
-	enum flags {
-		running_linux = 0x1,
-		dedicated = 0x2,
-		passworded = 0x4,
-	};
-};
-
 
 class ServerStore
 {

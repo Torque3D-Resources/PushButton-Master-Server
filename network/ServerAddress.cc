@@ -26,6 +26,7 @@
  */
 ServerAddress::ServerAddress()
 {
+	this->socket	= -1;
 	this->port		= 0;
 	memset(&address, 0, sizeof(address));
 }
@@ -37,6 +38,7 @@ ServerAddress::ServerAddress()
  */
 ServerAddress::ServerAddress( const ServerAddress *a )
 {
+	this->socket	= a->socket;
 	this->port		= a->port;
 	this->address	= a->address;
 }
@@ -49,8 +51,8 @@ ServerAddress::ServerAddress( const ServerAddress *a )
  * or extend as needed to support other networking
  * systems.
  */
-ServerAddress::ServerAddress( const netAddress * a ) {
-	getFrom(a);
+ServerAddress::ServerAddress( const netAddress * a, int inSocket ) {
+	getFrom(a, inSocket);
 }
 
 /**
@@ -59,11 +61,12 @@ ServerAddress::ServerAddress( const netAddress * a ) {
  * @param	aHost	String specifying host (in a.b.c.d format)
  * @param	aPort	Port number.
  */
-void ServerAddress::set( const netAddress *a )
+void ServerAddress::set( const netAddress *a, int inSocket )
 {
 	const sockaddr_storage *addr = (sockaddr_storage*)a->getData();
 
 	type = 0;
+	this->socket	= inSocket;
 	this->port		= 0;
 	memset(&address, 0, sizeof(address));
 
@@ -99,10 +102,11 @@ void ServerAddress::set( const netAddress *a )
  * @param[out] buff String buffer with at least 16 bytes capacity.
  * @return provided string buffer containing the address.
  */
-void ServerAddress::toString( char outStr[256] ) const
+const char* ServerAddress::toString( char outStr[256] ) const
 {
 	netAddress addr(this);
 	addr.toString(outStr);
+	return outStr;
 }
 
 /**
@@ -120,9 +124,9 @@ void ServerAddress::putInto( netAddress * a )
  *
  * @param	a	A netAddress to get info from.
  */
-void ServerAddress::getFrom( const netAddress * a )
+void ServerAddress::getFrom( const netAddress * a, int inSocket )
 {
-	set(a);
+	set(a, inSocket);
 }
 
 

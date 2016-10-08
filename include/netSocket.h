@@ -67,15 +67,13 @@ public:
   void getHost(char outStr[256]) const;
   int getPort() const ;
 
-  static bool getLocalHost (int family, netAddress *outAddr) ;
-
   bool getBroadcast () const ;
   int getFamily() const;
 
   int getDataSize() const;
   const void* getData() const;
 
-  void toString(char outStr[256]) const;
+  const char* toString(char outStr[256]) const;
 };
 
 
@@ -91,10 +89,10 @@ public:
   netSocket () ;
   virtual ~netSocket () ;
 
-  int getHandle () const { return handle; }
-  void setHandle (int handle) ;
+  UPTR getHandle () const { return handle; }
+  void setHandle (UPTR handle) ;
   
-  bool  open        ( bool stream=true ) ;
+  bool  open        ( bool ipv6, bool stream ) ;
   void  close		    ( void ) ;
   int   bind        ( const netAddress *addr ) ;
   int   listen	    ( int backlog ) ;

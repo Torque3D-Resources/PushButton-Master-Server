@@ -38,14 +38,14 @@ class ServerAddress
 public:
 	ServerAddress();
 	ServerAddress(const ServerAddress *addr);
-	ServerAddress(const netAddress *addr);
+	ServerAddress(const netAddress *addr, int socket);
 
-	void toString( char outstr[256] ) const;
-	void set(const netAddress *addr);
+	const char* toString( char outstr[256] ) const;
+	void set( const netAddress *addr, int socket );
 
 
 	void putInto(netAddress *a);
-	void getFrom(const netAddress *a);
+	void getFrom(const netAddress *a, int socket);
 
 	bool equals(const ServerAddress *a);
 
@@ -55,15 +55,13 @@ public:
 		IPV6Address
 	};
 
-	S32 type;
-/* for ref
+	U8 type;
+	S8 socket; // Ideal socket to use to send reply
 
-	union
-	{
-		U32	address;
-		U8	addy[4];
-	};
-	*/
+	/**
+	 * @brief Port for addy.
+	 */
+	U16 port;
 
 	/**
 	 * @brief Quads for addy.
@@ -91,11 +89,6 @@ public:
 	 	} ipv6_raw;
 
 	 } address;
-
-	/**
-	 * @brief Port for addy.
-	 */
-	U16	port;
    
     // @note: comparison operator doesn't check netFlow or netScope
     bool operator==(const ServerAddress &other) const

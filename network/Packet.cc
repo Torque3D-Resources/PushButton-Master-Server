@@ -64,23 +64,23 @@ Packet::~Packet()
 }
 
 
-void Packet::writeBytes(const void *data, size_t length)
+bool Packet::writeBytes(const void *data, size_t length)
 {
 	if(readOnly)
 	{
 		printf("Attempted to write to a readonly packet!\n");
-		return;
+		return false;
 	}
 
 	if(!length)
-		return;
+		return true;
 	
 	// verify we have enough buffer space to write to
-	if(!(getLength() + length) > size)
+	if((getLength() + length) > size)
 	{
 		// not enough bytes remain, abort
 		statusOK = false;
-		return;
+		return false;
 	}
 
 	// write out data
@@ -90,25 +90,26 @@ void Packet::writeBytes(const void *data, size_t length)
 	ptr += length;
 
 	// done
+	return true;
 }
 
-void Packet::readBytes(void *data, size_t length)
+bool Packet::readBytes(void *data, size_t length)
 {
 	if(!readOnly)
 	{
 		printf("Attempted to read from a writeonly packet!\n");
-		return;
+		return false;
 	}
 
 	if(!length)
-		return;
+		return true;
 	
 	// verify we have enough data to read
 	if((getLength() + length) > size)
 	{
 		// not enough bytes remain, abort
 		statusOK = false;
-		return;
+		return false;
 	}
 
 	// read in data
@@ -118,6 +119,7 @@ void Packet::readBytes(void *data, size_t length)
 	ptr += length;
 
 	// done
+	return true;
 }
 
 

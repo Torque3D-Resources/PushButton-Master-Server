@@ -47,6 +47,7 @@ bool handleListRequest(tMessageSession &msg)
 	ServerFilter	filter;
 	Session			*ps;
 	U8				index;
+	U8				responseType;
 	int				i;
 	char			buffer[256];
 
@@ -179,6 +180,29 @@ bool handleListRequest(tMessageSession &msg)
 
 	// search for servers matching query filter
 	msg.session = ps;
+
+	// We need to force the default region filter mask based on the request
+	responseType = ps->sessionFlags & Session::NewStyleResponse ? 1 : 0;
+	if (responseType == 0)
+	{
+		if ((filter.regions & ServerFilter::RegionAddressMask) == 0)
+		{
+			filter.regions |= ServerFilter::RegionIsIPV4Address;
+		}
+
+		// this should be unset
+		filter.regions &= ~ServerFilter::RegionIsIPV6Address;
+	}
+	else if (responseType == 1)
+	{
+		if ((filter.regions & ServerFilter::RegionAddressMask) == 0)
+		{
+			filter.regions |= ServerFilter::RegionIsIPV4Address;
+			filter.regions |= ServerFilter::RegionIsIPV6Address;
+		}
+	}
+
+	// NOW we can search
 	gm_pStore->QueryServers(ps, &filter);
 	
 	debugPrintf(DPRINT_VERBOSE, "Got %hu results from queryServers.\n", ps->total);
@@ -249,7 +273,7 @@ bool handleInfoResponse(tMessageSession &msg)
 	info.gameType		= msg.pack->readCString();
 	info.missionType	= msg.pack->readCString();
 	info.maxPlayers		= msg.pack->readU8();
-	info.regions		= msg.pack->readU32();
+	info.regions		= msg.pack->readU32() & ~ServerFilter::RegionAddressMask;
 	info.version		= msg.pack->readU32();
 	info.infoFlags		= msg.pack->readU8();
 	info.numBots		= msg.pack->readU8();
@@ -483,10 +507,6 @@ void sendInfoResponse(tMessageSession &msg)
 void sendListResponse(tMessageSession &msg, U8 index)
 {
 	Packet			*reply = new Packet(LIST_PACKET_SIZE);
-	tServerAddress	addr;
-	U16				count;	// number of servers to place into packet
-	U16				start;	// start position in servers list result
-	U16				i;
 
 	/*
 	
@@ -495,9 +515,27 @@ void sendListResponse(tMessageSession &msg, U8 index)
 	U8			packetIndex;
 	U8			packetTotal;
 	U16			serverCount;
-	struct {
-		U32		address;
-		U16		port;
+	struct MasterServerListResponse { // old style
+		struct {
+			U32		address;
+			U16		port;
+		}			servers[serverCount];
+	}
+	struct MasterServerExtendedListResponse { // new style
+		U8 addressType;
+		union
+		{
+			struct ipv4 // if addressType == 0
+			{
+				U32		address;
+				U16		port;
+			}
+			struct ipv6 // if addressType == 1
+			{
+				U8		address[16];
+				U16		port;
+			}
+		}
 	}			servers[serverCount];
 	
 
@@ -506,32 +544,24 @@ void sendListResponse(tMessageSession &msg, U8 index)
 	// first thing is to make sure requested index is within server results range
 	if(index >= msg.session->packTotal)
 		return; // abort, invalid packet index
-	
-	// figure out how many servers are going into this packet
-	if(index == msg.session->packTotal -1)
-		count = msg.session->packLast;	// number of servers on last packet
-	else
-		count = msg.session->packNum;	// number of servers per packet
 
-	// figure out our start position for this packet to iterate through the list
-	start = msg.session->packNum * index;
-	
+	ServerResultPacket &resultPacket = msg.session->results[index];
 
 	// write packet header and the list details
-	reply->writeHeader(MasterServerListResponse, 0, msg.header->session, msg.header->key);
-	reply->writeU8(index);						// packet index
-	reply->writeU8(msg.session->packTotal);		// total packets
-	reply->writeU16(count);						// server count in this packet
-
-	// now populate the server list
-	for(i=0; i<count; i++)
+	U8 responseType = msg.session->sessionFlags & Session::NewStyleResponse ? 1 : 0;
+	if (responseType == 0)
 	{
-		// get server address record
-		addr = msg.session->results[start + i];
-
-		// write server address and port
-		reply->writeU32(addr.address);
-		reply->writeU16(addr.port);
+		reply->writeHeader(MasterServerListResponse, 0, msg.header->session, msg.header->key);
+		reply->writeU8(index);						// packet index
+		reply->writeU8(msg.session->packTotal);		// total packets
+		reply->writeBytes(resultPacket.data, resultPacket.size);
+	}
+	else if (responseType == 1)
+	{
+		reply->writeHeader(MasterServerExtendedListResponse, 0, msg.header->session, msg.header->key);
+		reply->writeU8(index);						// packet index
+		reply->writeU8(msg.session->packTotal);		// total packets
+		reply->writeBytes(resultPacket.data, resultPacket.size);
 	}
 
 	// All done, send.

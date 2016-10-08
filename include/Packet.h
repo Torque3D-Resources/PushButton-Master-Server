@@ -94,8 +94,8 @@ class Packet
 		~Packet();
 
 		// primitive I/O methods
-		void writeBytes(const void *data, size_t length);
-		void readBytes(void *data, size_t length);
+		bool writeBytes(const void *data, size_t length);
+		bool readBytes(void *data, size_t length);
 
 		// Our base primitives (U8 is a byte, hopefully :)
 		void writeU8(U8 b);

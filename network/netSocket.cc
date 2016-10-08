@@ -48,7 +48,7 @@ void netAddress::set ( const ServerAddress *info )
     addrNum[0] = info->address.ipv4.netNum[0];
     addrNum[1] = info->address.ipv4.netNum[1];
     addrNum[2] = info->address.ipv4.netNum[2];
-    addrNum[4] = info->address.ipv4.netNum[3];
+    addrNum[3] = info->address.ipv4.netNum[3];
   }
   else if (info->type == ServerAddress::IPV6Address)
   {
@@ -73,9 +73,13 @@ void netAddress::set ( const char *inStr, bool hostLookup )
   if (getaddrinfo(inStr, NULL, &hint, &res) == 0)
   {
     if (res->ai_family == AF_INET)
+    {
       memcpy(&data, res->ai_addr, sizeof(sockaddr_in));
+    }
     else if (res->ai_family == AF_INET6)
+    {
       memcpy(&data, res->ai_addr, sizeof(sockaddr_in6));
+    }
   }
 }
 
@@ -113,12 +117,6 @@ int netAddress::getPort() const
     return 0;
 }
 
-bool netAddress::getLocalHost (int family, netAddress *out)
-{
-  // TODO: getaddrinfo
-  return false;
-}
-
 bool netAddress::getBroadcast () const
 {
   const sockaddr_in *socketAddr = (const sockaddr_in*)&data;
@@ -142,13 +140,13 @@ const void* netAddress::getData() const
   return &data;
 }
 
-void netAddress::toString(char outStr[256]) const
+const char* netAddress::toString(char outStr[256]) const
 {
   if (data.ss_family == AF_INET)
   {
     const sockaddr_in *socketAddr = (const sockaddr_in*)&data;
     char buffer[128];
-    inet_ntop(AF_INET, (sockaddr*)(&data), buffer, sizeof(buffer));
+    inet_ntop(AF_INET, (const sockaddr*)(&socketAddr->sin_addr), buffer, sizeof(buffer));
 
     if (socketAddr->sin_port == 0)
       snprintf(outStr, 256, "%s", buffer);
@@ -159,7 +157,7 @@ void netAddress::toString(char outStr[256]) const
   {
     const sockaddr_in6 *socketAddr6 = (const sockaddr_in6*)&data;
     char buffer[128];
-    inet_ntop(AF_INET6, (sockaddr*)(&data), buffer, sizeof(buffer));
+    inet_ntop(AF_INET6, (const sockaddr*)(&socketAddr6->sin6_addr), buffer, sizeof(buffer));
 
     if (socketAddr6->sin6_port == 0)
       snprintf(outStr, 256, "%s", buffer);
@@ -170,6 +168,8 @@ void netAddress::toString(char outStr[256]) const
   {
     outStr[0] = '\0';
   }
+  
+  return outStr;
 }
 
 netSocket::netSocket ()
@@ -184,17 +184,17 @@ netSocket::~netSocket ()
 }
 
 
-void netSocket::setHandle (int _handle)
+void netSocket::setHandle (UPTR _handle)
 {
   close () ;
   handle = _handle ;
 }
 
 
-bool netSocket::open ( bool stream )
+bool netSocket::open ( bool ipv6, bool stream )
 {
   close () ;
-  handle = ::socket ( AF_INET, (stream? SOCK_STREAM: SOCK_DGRAM), 0 ) ;
+  handle = ::socket ( ipv6 ? AF_INET6 : AF_INET, (stream? SOCK_STREAM: SOCK_DGRAM), 0 ) ;
   return (handle != -1);
 }
 
@@ -247,7 +247,7 @@ void netSocket::setBroadcast ( bool broadcast )
 int netSocket::bind ( const netAddress* bindAddress )
 {
   assert ( handle != -1 ) ;
-  return ::bind(handle,(const sockaddr*)bindAddress,sizeof(netAddress));
+  return ::bind(handle,(const sockaddr*)bindAddress, bindAddress->getDataSize());
 }
 
 
@@ -268,7 +268,7 @@ int netSocket::accept ( const netAddress* addr )
   }
   else
   {
-    socklen_t addr_len = (socklen_t) sizeof(netAddress) ;
+    socklen_t addr_len = (socklen_t) addr->getDataSize();
     return ::accept(handle,(sockaddr*)addr,&addr_len);
   }
 }
@@ -296,7 +296,7 @@ int netSocket::sendto ( const void * buffer, int size,
 {
   assert ( handle != -1 ) ;
   return ::sendto(handle,(const char*)buffer,size,flags,
-                         (const sockaddr*)to,sizeof(netAddress));
+                         (const sockaddr*)to,to->getDataSize());
 }
 
 
@@ -311,7 +311,7 @@ int netSocket::recvfrom ( void * buffer, int size,
                           int flags, netAddress* from )
 {
   assert ( handle != -1 ) ;
-  socklen_t fromlen = (socklen_t) sizeof(netAddress) ;
+  socklen_t fromlen = (socklen_t) from->getDataSize() ;
   return ::recvfrom(handle,(char*)buffer,size,flags,(sockaddr*)from,&fromlen);
 }
 
@@ -456,7 +456,7 @@ int netInit ( int* argc, char** argv )
 
 int netInit ()
 {
-  assert ( sizeof(sockaddr_in) == sizeof(netAddress) ) ;
+  assert ( sizeof(sockaddr_storage) == sizeof(netAddress) ) ;
 
 #if defined(UL_CYGWIN) || !defined (UL_WIN32)
 #else

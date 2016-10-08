@@ -109,7 +109,7 @@ struct tDaemonConfig
 	char	pidfile[256];		// path and name of process id file
 	char	name[256];			// name of master server instance
 	char	region[256];		// region of where master server resides
-	char	address[256];		// local IP listening address to bind to
+	std::vector<char*> address; // local IDP addresses to bind to
 	U32		port;				// local UDP listening port number to bind to
 	U32		heartbeat;			// amount of time without heartbeat response before server is delisted
 	U32		verbosity;			// verbosity logging level
@@ -121,6 +121,39 @@ struct tDaemonConfig
 	U32		floodBanTime;		// peer is banned for X seconds once reaching max tickets
 	U32		floodMaxTickets;	// ban peer once reaching X tickets
 	U32		floodBadMsgTicket;	// number of X tickets for receiving bad messages from peer
+
+	U32		testingMode;
+
+	void reset()
+	{
+		file[0] = '\0';
+		pidfile[0] = '\0';
+		name[0] = '\0';
+		region[0] = '\0';
+
+		for (int i=address.size()-1; i >= 0; i--)
+		{
+			delete address[i];
+		}
+		address.clear();
+
+		port = 0;
+		heartbeat = 0;
+		verbosity = 0;
+		timestamp = 0;
+		floodResetTime = 0;
+		floodForgetTime = 0;
+		floodBanTime = 0;
+		floodMaxTickets = 0;
+		floodBadMsgTicket = 0;
+
+		testingMode = 0;
+	}
+
+	~tDaemonConfig()
+	{
+		reset();
+	}
 };
 
 //=============================================================================
@@ -132,6 +165,8 @@ enum eConfigEntityType
 	CONFIG_TYPE_STR,			// String -- char array
 	CONFIG_TYPE_S32,			// Signed 32bit integer
 	CONFIG_TYPE_U32,			// Unsigned 32bit integer
+
+	CONFIG_TYPE_STR_VECTOR,			// String -- vector of char array
 
 	CONFIG_SECTION = 100		// config document section
 };
@@ -177,6 +212,7 @@ public:
 // global source member, daemon configuration structure
 extern tDaemonConfig	*gm_pConfig;
 
+extern bool shouldDebugPrintf(const int level);
 extern void debugPrintf(int level, const char *format, ...);
 static inline bool checkLogLevel(int level)
 {
