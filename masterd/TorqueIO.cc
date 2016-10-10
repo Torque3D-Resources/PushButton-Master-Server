@@ -82,9 +82,9 @@ bool handleListRequest(tMessageSession &msg)
 	{
 		msg.addr->toString(buffer);
 		if(index == 0xFF)
-			printf("Received list query request from %s:%hu\n", buffer, msg.addr->port);
+			printf("Received list query request from %s\n", buffer);
 		else
-			printf("Received list resend request from %s:%hu\n", buffer, msg.addr->port);
+			printf("Received list resend request from %s\n", buffer);
 		printf(" [F: %X, S: %X, K: %u, I: %X]\n", msg.header->flags, msg.header->session, msg.header->key, index);
 	}
 
