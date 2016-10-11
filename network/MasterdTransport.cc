@@ -29,9 +29,7 @@
  *
  * Initializes the transport on the given host/port.
  *
- * @todo Host/port should probably be dealt with as an implementation detail?
- * @param host	Either a host, or a blank string. A blank string will cause the transport to guess at localhost.
- * @param port	Port number to use. 28002 is a good default.
+ * @param listenAddresses	A list of addresses to bind to.
  */
 MasterdTransport::MasterdTransport( std::vector<netAddress> &listenAddresses )
 {
@@ -181,7 +179,7 @@ void MasterdTransport::sendPacket(Packet *data, ServerAddress *to)
 	char buffer[256];
 	netAddress naddr(to);
 	assert(to->socket >= 0 && to->socket < MAX_LISTEN_SOCKETS);
-	printf("sendPacket to socket %i (%s)\n", to->socket, naddr.toString(buffer));
+	//printf("sendPacket to socket %i (%s)\n", to->socket, naddr.toString(buffer));
 	sock[to->socket]->sendto(data->getBufferPtr(), (int)data->getLength(), 0, &naddr);
 }
 

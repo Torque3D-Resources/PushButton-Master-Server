@@ -26,14 +26,13 @@
  * @brief Writable packet constructor
  *
  * @param	size	Size of the packet. (in bytes)
- * @todo Make sure that we check bounds?
  */
 Packet::Packet(size_t size)
 {
 	// Make a new packet with size bytes allocated
 	readOnly = false;
 	statusOK = true;
-	buff = new char[size]; //(char *)malloc(sizeof(char) * size);
+	buff = new char[size];
 	ptr = buff;
 
 	this->size = size;
@@ -49,7 +48,7 @@ Packet::Packet(size_t size)
 Packet::Packet( char * aBuff, size_t length)
 {
 	// Prepare to parse a received packet
-	buff = new char[length]; //(char *)malloc(len);
+	buff = new char[length];
 	memcpy(buff, aBuff, length);
 	ptr = buff;
 	readOnly = true;
@@ -167,6 +166,7 @@ char* Packet::readCString()
 
 	// allocate a new string plus a NULL char
 	str = new char[length +1];
+	str[0] = 0;
 	str[length] = 0;
 
 	// read string into our new string
@@ -189,28 +189,6 @@ void Packet::writeCString(const char *str, size_t length)
 	writeU8(length);			// string length, excluding NULL
 	writeBytes(str, length);	// string characters, excluding NULL	
 }
-
-
-/*
-void Packet::readNullString(char *dat)
-{
-	char f; int i=0;
-	while((f=readU8()))
-		dat[i++] = f;
-	dat[i++] = 0;
-}
-
-void Packet::writeNullString(char *dat)
-{
-//	char * ptr2 = dat;
-	char c;
-
-	while(c = *(dat++))
-		writeU8(c);
-	writeU8(0);
-}
-*/
-
 
 /**
  * @brief Write standard protocol header to the packet.

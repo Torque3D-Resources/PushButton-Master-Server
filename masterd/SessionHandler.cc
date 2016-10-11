@@ -24,8 +24,6 @@
 
 /**
  * @brief We store the SessionHandler global here.
- *
- * @todo Should we make SessionHandler a singleton? Doesn't really seem worth it.
  */
 FloodControl	*gm_pFloodControl;
 

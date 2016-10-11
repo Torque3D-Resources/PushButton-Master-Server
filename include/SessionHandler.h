@@ -36,7 +36,7 @@
 struct ServerResultPacket
 {
 	U16 size;
-	U8 data[LIST_PACKET_SIZE];
+	U8 data[LIST_PACKET_SIZE - LIST_PACKET_HEADER];
 
 	inline U16 getNumServers() { return *((U16*)data); }
 };

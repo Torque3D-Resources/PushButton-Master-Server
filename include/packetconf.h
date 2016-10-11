@@ -39,8 +39,6 @@
 /**
  * @brief Maximum size of a list packet.
  *
- * @todo Tweak if we experience packet fragmentation/truncation.
- *
  */
 #define LIST_PACKET_SIZE		MAX_PACKET_SIZE
 

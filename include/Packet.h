@@ -121,10 +121,6 @@ class Packet
 
 		// Wrapper functions
 
-		//	- read/write nullterm'ed strings
-//		void readNullString(char* dat); // Reads into dat
-//		void writeNullString(char* dat);
-
 		//	- read/write length indicated strings
 		char *readCString();
 		void writeCString(const char *str, size_t length);
