@@ -32,7 +32,7 @@
  * and as for as cable/FIOS is concerned they don't have as severe MTU
  * sizes as DSL w/ PPPoE has. --TRON
  */
-#define UDP_HEADER_SIZE			28
+#define UDP_HEADER_SIZE			48
 #define MAX_MTU_SIZE			1492
 #define MAX_PACKET_SIZE			(MAX_MTU_SIZE - UDP_HEADER_SIZE)
 
