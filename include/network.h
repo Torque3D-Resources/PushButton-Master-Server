@@ -27,6 +27,7 @@
 #define _NETWORK_H_
 
 #include <stdlib.h>
+#include <time.h>
 #include "ServerAddress.h"
 #include "Packet.h"
 #include "MasterdTransport.h"
@@ -58,7 +59,7 @@ void initNetworkLib();	// Initialize the library.
 void killNetworkLib();	// Shut us down.
 
 // Reduce UL dependencies...
-int getAbsTime();
+time_t getAbsTime();
 void millisleep(int delay);
 
 

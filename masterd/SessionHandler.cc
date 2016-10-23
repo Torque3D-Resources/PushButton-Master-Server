@@ -141,7 +141,7 @@ void FloodControl::CheckSessions(tPeerRecord *peerrec, bool forceExpire)
 {
 	tcSessionList::iterator	it, next;
 	Session					*ps;
-	S32						ts;
+	time_t					ts;
 
 	// get current timestamp
 	ts = getAbsTime();
@@ -155,11 +155,11 @@ void FloodControl::CheckSessions(tPeerRecord *peerrec, bool forceExpire)
 		if(forceExpire)
 		{
 			// we are to destry all existing sessions, force it to be expired
-			ps->lastUsed = 0;
+			ps->tsLastUsed = 0;
 		}
 
 		// move on to next session if current one hasn't expired yet
-		if(ps->lastUsed + SESSION_EXPIRE_TIME > ts)
+		if(ps->tsLastUsed + SESSION_EXPIRE_TIME > ts)
 		{
 			it++;
 			continue;
@@ -262,7 +262,7 @@ bool FloodControl::CheckPeer(ServerAddress &peer, tPeerRecord **peerrec, bool ef
 
 bool FloodControl::CheckPeer(tPeerRecord *peerrec, bool effectRep)
 {
-	S32 ts;
+	time_t ts;
 	char buffer[256];
 
 	
@@ -405,7 +405,7 @@ bool FloodControl::GetSession(tPeerRecord *peerrec, tPacketHeader *header, Sessi
 		if(ps->session == header->session)
 		{
 			// found it
-			ps->lastUsed	= getAbsTime();
+			ps->tsLastUsed	= getAbsTime();
 			*session		= ps;
 			break;
 		}
@@ -434,7 +434,7 @@ bool FloodControl::GetAuthenticatedSession(tPeerRecord *peerrec, tPacketHeader *
 		if(ps->authSession != 0 && ps->authSession == header->session)
 		{
 			// found it
-			ps->lastUsed	= getAbsTime();	
+			ps->tsLastUsed	= getAbsTime();	
 			*session		= ps;
 			if(shouldDebugPrintf(DPRINT_VERBOSE))
 			{
@@ -480,7 +480,7 @@ void FloodControl::SendAuthenticationChallenge(tMessageSession &msg)
 		authSession = rand();
 		if (authSession == 0)
 			continue;
-		
+
 		for (U32 i=0; i<numSessions; i++)
 		{
 			if (sessionKeys[i] == authSession)

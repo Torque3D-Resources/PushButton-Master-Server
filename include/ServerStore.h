@@ -269,8 +269,8 @@ public:
 
 
 	// Bookkeeping information
-	int  last_heart;	// Last time we got a heart beat
-	int  last_info;	// Last time we got info from them
+	time_t  tsLastHeart;	// Last time we got a heart beat
+	time_t  tsLastInfo;	// Last time we got info from them
 	bool m_DestroyPlayers;
 	bool testServer;
 	bool ownsStrings;
@@ -289,8 +289,8 @@ public:
 		CPUSpeed	= 0;
 		playerCount	= 0;
 		
-		last_heart	= 0;
-		last_info	= 0;
+		tsLastHeart	= 0;
+		tsLastInfo	= 0;
 		
 		m_DestroyPlayers = destroyPlayers;
 		testServer = false;

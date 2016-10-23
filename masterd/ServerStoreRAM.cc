@@ -211,7 +211,7 @@ void ServerStoreRAM::AddServer(ServerAddress *addr, ServerInfo *info)
 
 	
 	// add missing information
-	info->last_info		= getAbsTime();
+	info->tsLastInfo		= getAbsTime();
 	info->addr			= *addr;
 
 	// notify game and mission types manager
@@ -311,7 +311,7 @@ void ServerStoreRAM::DoProcessing(int count)
 		rec = &m_ProcIT->second;
 
 		// has server record expired?
-		if(rec->last_info + (int)gm_pConfig->heartbeat > getAbsTime() || (testMode && rec->testServer))
+		if(rec->tsLastInfo + (time_t)gm_pConfig->heartbeat > getAbsTime() || (testMode && rec->testServer))
 		{
 			// nope, next...
 			m_ProcIT++;
@@ -404,7 +404,7 @@ void ServerStoreRAM::UpdateServer(ServerAddress *addr, ServerInfo *info)
 	info->setToDestroy(false);	// don't destroy player list, we're using it
 
 	// update last information update time
-	rec->last_info = getAbsTime();
+	rec->tsLastInfo = getAbsTime();
 
 	if(shouldDebugPrintf(DPRINT_VERBOSE))
 	{

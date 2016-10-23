@@ -60,7 +60,7 @@ public:
 	U32						session;			// associated session identifier
 	U32						authSession;	// Authenticated session key
 
-	S32						lastUsed;		// last time this session was used
+	time_t					tsLastUsed;		// last time this session was used
 
 	tcServerAddrVector	results;			// associated server query results
 
@@ -74,7 +74,7 @@ public:
 //		printf("DEBUG: session object born: %X\n", this);
 		
 		this->session	= session;
-		this->lastUsed	= getAbsTime();
+		this->tsLastUsed	= getAbsTime();
 		this->sessionFlags = flags & ~AuthenticatedSession;
 		this->authSession = 0;
 		this->total = 0;
@@ -107,10 +107,10 @@ typedef struct tPeerRecord
 {
 	ServerAddress	peer;				// remote peer's address and port info
 	tcSessionList	sessions;			// sessions list of (game client) peer
-	S32				tsCreated;			// when this record was created
-	S32				tsLastSeen;			// last time peer was seen
-	S32				tsLastReset;		// last time peer's tickets were reset
-	S32				tsBannedUntil;		// peer is banned until timestamp
+	time_t			tsCreated;			// when this record was created
+	time_t			tsLastSeen;			// last time peer was seen
+	time_t			tsLastReset;		// last time peer's tickets were reset
+	time_t			tsBannedUntil;		// peer is banned until timestamp
 	S32				tickets;			// count of violations
 	U32				bans;				// count of times peer has been banned
 } tPeerRecord;

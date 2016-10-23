@@ -54,9 +54,9 @@ void killNetworkLib()	// Shut us down.
  *
  * @return current time in seconds.
  */
-int getAbsTime()
+time_t getAbsTime()
 {
-	return (int)time(NULL);
+	return time(NULL);
 }
 
 /**
