@@ -33,7 +33,7 @@ typedef struct tPacketHeader
 	U8		flags;				// flags
 
 	// session and key below are the U32 sequencer in some packets
-	U16		session;			// session identifier
+	U32		session;			// session identifier
 	U16		key;				// session key
 } tPacketHeader;
 
@@ -133,9 +133,9 @@ class Packet
 		char*	getBufferCopy();
 		char*	getBufferPtr()	{ return buff; }
 		
-		void	writeHeader(U8 type, U8 flags, U16 session, U16 key);
+		void	writeHeader(U8 type, U8 flags, U32 session, U16 key);
 		void	writeHeader(tPacketHeader &header)	{ writeHeader(header.type, header.flags, header.session, header.key); }
-		void	readHeader(U8 &type, U8 &flags, U16 &session, U16 &key);
+		void	readHeader(U8 &type, U8 &flags, U32 &session, U16 &key);
 		void	readHeader(tPacketHeader &header)	{ readHeader(header.type, header.flags, header.session, header.key); }
 
 		bool	getStatus() { return statusOK; };

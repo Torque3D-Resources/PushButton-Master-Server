@@ -252,8 +252,9 @@ class ServerInfo
 {
 public:
 	ServerAddress	addr;
-	U16				session;
+	U32				session;
 	U16				key;
+	U32				authSession;
 
 	char	*gameType;
 	char	*missionType;
@@ -325,7 +326,7 @@ public:
 	
 	// Work functions
 	virtual void DoProcessing(int count = 5) = 0;
-	virtual void HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key) = 0;
+	virtual void HeartbeatServer(ServerAddress *addr, U32 *session, U16 *key) = 0;
 	virtual void UpdateServer(ServerAddress *addr, ServerInfo *info) = 0;
 
 	virtual void QueryServers(Session *session, ServerFilter *filter) = 0;

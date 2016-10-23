@@ -372,12 +372,13 @@ void FloodControl::CreateSession(tPeerRecord *peerrec, tPacketHeader *header, Se
 	// don't allow more than SESSION_MAX sessions at the same time
 	if(peerrec->sessions.size() >= SESSION_MAX)
 	{
+		debugPrintf(DPRINT_DEBUG, "SESSION MAX EXCEEDED!!!!!!!!!!\n");
 		*session = NULL;
 		return; // peer has reached session limit
 	}
 
 	// create new session
-	*session = new Session(header->session, header->key, header->flags);
+	*session = new Session(header->session, header->flags);
 
 	// keep track of session
 	peerrec->sessions.push_back(*session);
@@ -401,10 +402,10 @@ bool FloodControl::GetSession(tPeerRecord *peerrec, tPacketHeader *header, Sessi
 		ps = *it;
 
 		// is this the session we're looking for?
-		if(ps->session == header->session && ps->key == header->key)
+		if(ps->session == header->session)
 		{
 			// found it
-			ps->lastUsed	= getAbsTime();	
+			ps->lastUsed	= getAbsTime();
 			*session		= ps;
 			break;
 		}
@@ -414,4 +415,98 @@ bool FloodControl::GetSession(tPeerRecord *peerrec, tPacketHeader *header, Sessi
 	return (*session == NULL);
 }
 
+bool FloodControl::GetAuthenticatedSession(tPeerRecord *peerrec, tPacketHeader *header, Session **session, bool ignoreNoSession)
+{
+	tcSessionList::iterator it;
+	Session					*ps;
+
+
+	// default to session not found
+	*session = NULL;
+	
+	// find the requested session
+	for(it = peerrec->sessions.begin(); it != peerrec->sessions.end(); it++)
+	{
+		// get pointer to session
+		ps = *it;
+
+		// is this the session we're looking for?
+		if(ps->authSession != 0 && ps->authSession == header->session)
+		{
+			// found it
+			ps->lastUsed	= getAbsTime();	
+			*session		= ps;
+			if(shouldDebugPrintf(DPRINT_VERBOSE))
+			{
+				debugPrintf(DPRINT_VERBOSE, " - Found session %u with auth key %u\n", ps->session, header->session);
+			}
+			break;
+		}
+	}
+
+	if (!ignoreNoSession && *session == NULL)
+	{
+		if (shouldDebugPrintf(DPRINT_VERBOSE))
+		{
+			debugPrintf(DPRINT_VERBOSE, "FloodControl: Creating authenticated session from session key %u\n", header->session);
+		}
+		gm_pFloodControl->CreateSession(peerrec, header, session);
+	}
+
+	// done
+	return (*session == NULL);
+}
+
+void FloodControl::SendAuthenticationChallenge(tMessageSession &msg)
+{
+	Packet *reply  = new Packet(PACKET_HEADER_SIZE + 4);
+	Session *sessionInstance = msg.session;
+	tPeerRecord *peerrec = msg.peerrec;
+
+	sessionInstance->sessionFlags |= Session::AuthenticatedSession | Session::NewStyleResponse;
+
+	U32 sessionKeys[SESSION_MAX];
+	U32 numSessions = 0;
+	for (tcSessionList::iterator itr = peerrec->sessions.begin(), end = peerrec->sessions.end(); itr != end; itr++)
+	{
+		sessionKeys[numSessions++] = (*itr)->authSession;
+	}
+
+	U32 authSession;
+	bool used = true;
+	while (used)
+	{
+		used = false;
+		authSession = rand();
+		if (authSession == 0)
+			continue;
+		
+		for (U32 i=0; i<numSessions; i++)
+		{
+			if (sessionKeys[i] == authSession)
+			{
+				used = true;
+				break;
+			}
+		}
+
+		if (numSessions == 0)
+		{
+			break;
+		}
+	}
+
+	sessionInstance->authSession = authSession;
+	if (shouldDebugPrintf(DPRINT_VERBOSE))
+	{
+		debugPrintf(DPRINT_VERBOSE, "FloodControl: generated auth key %u, sessionFlags %u\n", authSession, sessionInstance->sessionFlags);
+	}
+
+	// Prep and send packet
+	reply->writeHeader(MasterServerChallenge, sessionInstance->sessionFlags, sessionInstance->session, msg.header->key);
+	reply->writeU32(sessionInstance->authSession);
+
+	gm_pTransport->sendPacket(reply, &peerrec->peer);
+	delete reply;
+}
 

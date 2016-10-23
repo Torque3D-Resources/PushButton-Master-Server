@@ -123,6 +123,7 @@ struct tDaemonConfig
 	U32		floodBadMsgTicket;	// number of X tickets for receiving bad messages from peer
 
 	U32		testingMode;
+	U32		challengeMode;	// Enable session challenges
 
 	void reset()
 	{
@@ -148,6 +149,7 @@ struct tDaemonConfig
 		floodBadMsgTicket = 0;
 
 		testingMode = 0;
+		challengeMode = 0;
 	}
 
 	~tDaemonConfig()

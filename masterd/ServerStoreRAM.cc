@@ -338,7 +338,7 @@ void ServerStoreRAM::DoProcessing(int count)
 	// done
 }
 
-void ServerStoreRAM::HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key)
+void ServerStoreRAM::HeartbeatServer(ServerAddress *addr, U32 *session, U16 *key)
 {
 	// generate a random session and key to use to send an info request from the
 	// server that just hearbeat us. We really don't care about the session and
@@ -349,7 +349,7 @@ void ServerStoreRAM::HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key
 	// seed the random generator
 	srand(getAbsTime() + *((uint32_t*)addr->address.ipv4.netNum) + addr->port);
 	
-	if(session)	*session	= (U16)rand();
+	if(session)	*session	= (U32)rand();
 	if(key)		*key		= (U16)rand();
 
 	// done

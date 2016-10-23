@@ -193,22 +193,42 @@ void Packet::writeCString(const char *str, size_t length)
 /**
  * @brief Write standard protocol header to the packet.
  */
-void Packet::writeHeader(U8 type, U8 flags, U16 session, U16 key)
+void Packet::writeHeader(U8 type, U8 flags, U32 session, U16 key)
 {
 	writeU8( type);		// packet type
 	writeU8( flags);	// flags
-	writeU16(session);	// session
+
+	if (flags & Session::NewStyleResponse)
+	{
+		//printf("WROTE NEW STYLE HEADER %u\n", flags);
+		writeU32(session);
+	}
+	else
+	{
+		//printf("WROTE OLD STYLE HEADER %u\n", flags);
+		writeU16(session);	// session
+	}
+
 	writeU16(key);		// key
 }
 
 /**
  * @brief Read standard protocol header to the packet.
  */
-void Packet::readHeader(U8 &type, U8 &flags, U16 &session, U16 &key)
+void Packet::readHeader(U8 &type, U8 &flags, U32 &session, U16 &key)
 {
 	type	= readU8();		// packet type
 	flags	= readU8();		// flags
-	session	= readU16();	// session
+
+	if (flags & Session::NewStyleResponse)	// session
+	{
+		session = readU32();
+	}
+	else
+	{
+		session = readU16();
+	}
+
 	key		= readU16();	// key
 }
 

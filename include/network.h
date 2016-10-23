@@ -47,6 +47,7 @@
 #define MasterServerInfoRequest         24		// *, Torque doesn't use this...
 #define MasterServerInfoResponse        26
 #define MasterServerExtendedListResponse 40 // jamesu - packet which stores IPV6 data too
+#define MasterServerChallenge           42 // jamesu - challenge packet
 
 // Legend:
 //   * -- Implemented for Receive

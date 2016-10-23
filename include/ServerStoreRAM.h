@@ -29,7 +29,7 @@ public:
     ~ServerStoreRAM();
 	
 	void DoProcessing(int count = 5);
-	void HeartbeatServer(ServerAddress *addr, U16 *session, U16 *key);
+	void HeartbeatServer(ServerAddress *addr, U32 *session, U16 *key);
 	void UpdateServer(ServerAddress *addr, ServerInfo *info);
 
 	void QueryServers(Session *session, ServerFilter *filter);

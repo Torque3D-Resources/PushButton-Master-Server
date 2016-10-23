@@ -52,28 +52,33 @@ public:
 		OnlineQuery       = 0,        // Authenticated with master
 		OfflineQuery      = 1,   // On our own
 		NoStringCompress  = 1<<1,
-		NewStyleResponse = 1<<2   // Send new style packet response (with ipv6 & such)
+		NewStyleResponse = 1<<2,   // Send new style packet response (with ipv6 & such),
+		AuthenticatedSession = 1<<3, // Any dispatched tokens are authenticated
 	};
 
 
-	U16						session;		// associated session identifier
-	U16						key;			// associated key
+	U32						session;			// associated session identifier
+	U32						authSession;	// Authenticated session key
+
 	S32						lastUsed;		// last time this session was used
 
-	tcServerAddrVector		results;		// associated server query results
+	tcServerAddrVector	results;			// associated server query results
+
 	U16						total;			// total number of servers
-	U8						packTotal;		// total number of packets
+	U16						packTotal;		// total number of packets
 
-	U8 sessionFlags; // flags for session transmission data
+	U8 sessionFlags;							// flags for session transmission data
 
-	Session(U16 session, U16 key, U8 flags)
+	Session(U32 session, U8 flags)
 	{
 //		printf("DEBUG: session object born: %X\n", this);
 		
 		this->session	= session;
-		this->key		= key;
 		this->lastUsed	= getAbsTime();
-		this->sessionFlags = flags;
+		this->sessionFlags = flags & ~AuthenticatedSession;
+		this->authSession = 0;
+		this->total = 0;
+		this->packTotal = 0;
 	}
 	~Session()
 	{
@@ -82,6 +87,10 @@ public:
 		// do nothing
 	}
 
+	bool isAuthenticated()
+	{
+		return authSession != 0;
+	}
 };
 
 typedef std::list<Session *> tcSessionList;
@@ -107,7 +116,7 @@ typedef struct tPeerRecord
 } tPeerRecord;
 
 typedef std::unordered_map<ServerAddress, tPeerRecord> tcPeerRecordMap;
-
+class tMessageSession;
 
 class FloodControl
 {
@@ -137,6 +146,9 @@ public:
 	// session management functions
 	void CreateSession(tPeerRecord *peerrec, tPacketHeader *header, Session **session);
 	bool GetSession(tPeerRecord *peerrec, tPacketHeader *header, Session **session);
+
+	void SendAuthenticationChallenge(tMessageSession &msg);
+	bool GetAuthenticatedSession(tPeerRecord *peerrec, tPacketHeader *header, Session **session, bool ignoreNoSession);
 };
 
 //extern SessionHandler	*gm_pSessions;

@@ -612,6 +612,13 @@ BadRepPeer:
 			break;
 		}
 
+		case MasterServerChallenge:
+		{
+			debugPrintf(DPRINT_VERBOSE, "Received MasterServerChallenge\n");
+			result = handleChallengePacket(message);
+			break;
+		}
+
 		default:
 		{
 			debugPrintf(DPRINT_VERBOSE, "Unknown Packet Type %hhu\n", header.type);
@@ -714,6 +721,9 @@ void MasterdCore::InitPrefs(void)
 		},
 		{	CONFIG_TYPE_U32,	&m_Prefs.testingMode,		"testingMode",
 			"Enable testing mode\n"
+		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.challengeMode,		"challengeMode",
+			"Enable challenges for user sessions\n"
 		},
 
 		{ CONFIG_TYPE_NOTSET, NULL, NULL } // End of entities

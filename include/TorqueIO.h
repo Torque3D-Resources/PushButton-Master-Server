@@ -43,13 +43,14 @@ bool handleInfoRequest (tMessageSession &msg);
 bool handleTypesRequest(tMessageSession &msg);
 bool handleInfoResponse(tMessageSession &msg);
 bool handleHeartbeat   (tMessageSession &msg);
+bool handleChallengePacket(tMessageSession &msg);
 
 // Senders
 class ServerResults; // We can't do this because it breaks delete
 
 void sendTypesResponse	(tMessageSession &msg);
 void sendInfoResponse	(tMessageSession &msg);
-void sendListResponse	(tMessageSession &msg, U8 index);
+void sendListResponse	(tMessageSession &msg, U16 index);
 void sendInfoRequest	(tMessageSession &msg);
 
 #endif

@@ -40,13 +40,66 @@ bool isPrintableString(const char *str)
 }
 
 /**
+ * @brief Handles session auth for packets which require sessions
+ */
+bool handlePacketAuthentication(tMessageSession &msg, Session **outPs, bool ignoreNoSession)
+{
+	Session			*ps = NULL;
+
+	if (gm_pConfig->challengeMode)
+	{
+		gm_pFloodControl->GetAuthenticatedSession(msg.peerrec, msg.header, &ps, ignoreNoSession);
+		if (!ps)
+		{
+			debugPrintf(DPRINT_ERROR, " - Failed to create authenticated session!\n");
+			return false;
+		}
+		else if (!ps->isAuthenticated())
+		{
+			msg.session = ps;
+			debugPrintf(DPRINT_VERBOSE, " - Sending client authentication challenge\n");
+			gm_pFloodControl->SendAuthenticationChallenge(msg);
+			return false;
+		}
+
+		msg.session = ps;
+	}
+	else if (!ignoreNoSession)
+	{
+		// original method, create session if it doesn't exist
+		gm_pFloodControl->CreateSession(msg.peerrec, msg.header, &ps);
+		msg.session = ps;
+	}
+	else
+	{
+		// original method, sans challenge
+		gm_pFloodControl->GetSession(msg.peerrec, msg.header, &ps);
+		msg.session = ps;
+	}
+
+	*outPs = ps;
+	return true;
+}
+
+bool handleChallengePacket(tMessageSession &msg)
+{
+	Session *ps = NULL;
+	if (gm_pConfig->challengeMode)
+	{
+		handlePacketAuthentication(msg, &ps, false);
+	}
+	
+	return true;
+}
+
+/**
  * @brief Parse a list request packet and reply.
  */
 bool handleListRequest(tMessageSession &msg)
 {
 	ServerFilter	filter;
 	Session			*ps;
-	U8				index;
+	U16				index;
 	U8				responseType;
 	int				i;
 	char			buffer[256];
@@ -96,16 +149,24 @@ bool handleListRequest(tMessageSession &msg)
 	if(index != 0xFF)
 	{
 		// get associated session
-		gm_pFloodControl->GetSession(msg.peerrec, msg.header, &ps);
+
+		if (!handlePacketAuthentication(msg, &ps, true))
+		{
+			printf(" Authentication failed for some reason\n");
+
+			if(checkLogLevel(DPRINT_DEBUG))
+			{
+				printf(" No such session exists, ignoring resend request.\n");
+			}
+			
+			return true;
+		}
+		
 		if(ps)
 		{
 			// resend the requested list packet
 			msg.session = ps;
 			sendListResponse(msg, index);
-		} else
-		if(checkLogLevel(DPRINT_DEBUG))
-		{
-			printf(" No such session exists, ignoring resend request.\n");
 		}
 
 		// received packet OK
@@ -123,15 +184,15 @@ bool handleListRequest(tMessageSession &msg)
 	{
 		if(checkLogLevel(DPRINT_DEBUG))
 		{
-			printf(" Invalid query strings issued, ignoring query request.\n");
+			debugPrintf(DPRINT_DEBUG, " Invalid query strings issued, ignoring query request.\n");
 			if(isPrintableString(filter.gameType))
 			{
-				printf(" gameType is invalid..\n");
+				debugPrintf(DPRINT_DEBUG, " gameType is invalid..\n");
 				debugPrintHexDump(filter.gameType, strlen(filter.gameType));
 			}
 			if(isPrintableString(filter.missionType))
 			{
-				printf(" missionType is invalid..\n");
+				debugPrintf(DPRINT_DEBUG, " missionType is invalid..\n");
 				debugPrintHexDump(filter.gameType, strlen(filter.missionType));
 			}
 		}
@@ -169,12 +230,10 @@ bool handleListRequest(tMessageSession &msg)
 	if(filter.maxPlayers  < filter.minPlayers)
 		filter.maxPlayers = filter.minPlayers;
 
-
-	// create new session
-	gm_pFloodControl->CreateSession(msg.peerrec, msg.header, &ps);
-	if(!ps)
+	// make sure we have a valid authenticated session
+	if (!handlePacketAuthentication(msg, &ps, false))
 	{
-		debugPrintf(DPRINT_ERROR, " - Failed to create session!\n");
+		debugPrintf(DPRINT_ERROR, " - Packet authentication failed!\n");
 		return true;
 	}
 
@@ -286,15 +345,15 @@ bool handleInfoResponse(tMessageSession &msg)
 	{
 		if(checkLogLevel(DPRINT_DEBUG))
 		{
-			printf(" Invalid response strings issued, ignoring info response.\n");
+			debugPrintf(DPRINT_DEBUG, " Invalid response strings issued, ignoring info response.\n");
 			if(isPrintableString(info.gameType))
 			{
-				printf(" gameType is invalid..\n");
+				debugPrintf(DPRINT_DEBUG, " gameType is invalid..\n");
 				debugPrintHexDump(info.gameType, strlen(info.gameType));
 			}
 			if(isPrintableString(info.missionType))
 			{
-				printf(" missionType is invalid..\n");
+				debugPrintf(DPRINT_DEBUG, " missionType is invalid..\n");
 				debugPrintHexDump(info.gameType, strlen(info.missionType));
 			}
 		}
@@ -328,7 +387,8 @@ bool handleInfoResponse(tMessageSession &msg)
  */
 bool handleHeartbeat(tMessageSession &msg)
 {
-	U16 session, key;
+	U32 session;
+	U16 key;
 	
 	///	No Format of request after header.
 	
@@ -504,7 +564,7 @@ void sendInfoResponse(tMessageSession &msg)
  *
  *	We customize all this behaviour with defines.
  */
-void sendListResponse(tMessageSession &msg, U8 index)
+void sendListResponse(tMessageSession &msg, U16 index)
 {
 	Packet			*reply = new Packet(LIST_PACKET_SIZE);
 
@@ -551,14 +611,16 @@ void sendListResponse(tMessageSession &msg, U8 index)
 	U8 responseType = msg.session->sessionFlags & Session::NewStyleResponse ? 1 : 0;
 	if (responseType == 0)
 	{
-		reply->writeHeader(MasterServerListResponse, 0, msg.header->session, msg.header->key);
+		//printf(" Sending normal response (%i packets, %i total results).\n", msg.session->packTotal, msg.session->total);
+		reply->writeHeader(MasterServerListResponse, msg.session->sessionFlags, msg.header->session, msg.header->key);
 		reply->writeU8(index);						// packet index
 		reply->writeU8(msg.session->packTotal);		// total packets
 		reply->writeBytes(resultPacket.data, resultPacket.size);
 	}
 	else if (responseType == 1)
 	{
-		reply->writeHeader(MasterServerExtendedListResponse, 0, msg.header->session, msg.header->key);
+		//printf(" Sending new response (%i packets, %i total results, %i size).\n", msg.session->packTotal, msg.session->total, resultPacket.size);
+		reply->writeHeader(MasterServerExtendedListResponse, msg.session->sessionFlags, msg.header->session, msg.header->key);
 		reply->writeU8(index);						// packet index
 		reply->writeU8(msg.session->packTotal);		// total packets
 		reply->writeBytes(resultPacket.data, resultPacket.size);
