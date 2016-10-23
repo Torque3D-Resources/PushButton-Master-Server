@@ -60,7 +60,6 @@ void killNetworkLib();	// Shut us down.
 
 // Reduce UL dependencies...
 time_t getAbsTime();
-void millisleep(int delay);
 
 
 #endif

@@ -58,12 +58,3 @@ time_t getAbsTime()
 {
 	return time(NULL);
 }
-
-/**
- * @brief Sleep for the specified number of milliseconds.
- *
- */
-void millisleep(int delay)
-{
-	ulMilliSecondSleep(delay);
-}

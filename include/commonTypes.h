@@ -7,18 +7,6 @@
  * NOTE: These type defines are 32bit/64bit x86 arch biased.
  */
 
-/*
-typedef signed char      S8;
-typedef signed short     S16;
-typedef signed int       S32;
-typedef signed long long S64;
-
-typedef unsigned char      U8;
-typedef unsigned short     U16;
-typedef unsigned int       U32;
-typedef unsigned long long U64;
-*/
-
 #include <stdint.h>
 
 typedef int8_t S8;
