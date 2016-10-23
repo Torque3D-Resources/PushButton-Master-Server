@@ -103,6 +103,8 @@ bool handleListRequest(tMessageSession &msg)
 	U8				responseType;
 	int				i;
 	char			buffer[256];
+	bool isNewStyleResponse = msg.header->flags & Session::NewStyleResponse;
+	bool resendPacket = (isNewStyleResponse) ? (index == 65534) : (index == 255);
 
 	
 	/*
@@ -129,12 +131,12 @@ bool handleListRequest(tMessageSession &msg)
 	/***********************************
 	 List Query packet
 	***********************************/
-	index = msg.pack->readU8();
+	index = isNewStyleResponse ? msg.pack->readU16() : msg.pack->readU8();
 
 	if(checkLogLevel(DPRINT_VERBOSE))
 	{
 		msg.addr->toString(buffer);
-		if(index == 0xFF)
+		if(!resendPacket)
 			printf("Received list query request from %s\n", buffer);
 		else
 			printf("Received list resend request from %s\n", buffer);
@@ -146,7 +148,8 @@ bool handleListRequest(tMessageSession &msg)
 
 	// don't waste our time parsing the rest of this resend request packet,
 	// go ahead and resend the specific packet now
-	if(index != 0xFF)
+
+	if(resendPacket)
 	{
 		// get associated session
 
@@ -161,7 +164,7 @@ bool handleListRequest(tMessageSession &msg)
 			
 			return true;
 		}
-		
+
 		if(ps)
 		{
 			// resend the requested list packet
@@ -555,12 +558,10 @@ void sendInfoResponse(tMessageSession &msg)
  *	<li> We can send 248 servers/packet, then.
  * </ul>
  *
- * 	We never want to send more than 254 packets
- *  Because 255 == FF == the initial request indicator
- *
- *	So we can never give more than 62992 servers as a result. Note that this is quite
- *	a lot of servers; if we plan on more, then we can just make the packet index a
- *	U16 and issue an upgrade.
+ * 	For old style responses, We never want to send more than 254 packets
+ *  Because 255 == FF == the initial request indicator.
+ * 	Similarly for new style responses, We never want to send more than 65534 packets
+ *  Because 65535 == FFFF == the initial request indicator.
  *
  *	We customize all this behaviour with defines.
  */
@@ -572,8 +573,17 @@ void sendListResponse(tMessageSession &msg, U16 index)
 	
 	Format of response after header:
 
-	U8			packetIndex;
-	U8			packetTotal;
+	if (NewStyleResponse)
+	{
+		U16		packetIndex;
+		U16		packetTotal;
+	}
+	else
+	{
+		U8			packetIndex;
+		U8			packetTotal;
+	}
+
 	U16			serverCount;
 	struct MasterServerListResponse { // old style
 		struct {
@@ -621,8 +631,8 @@ void sendListResponse(tMessageSession &msg, U16 index)
 	{
 		//printf(" Sending new response (%i packets, %i total results, %i size).\n", msg.session->packTotal, msg.session->total, resultPacket.size);
 		reply->writeHeader(MasterServerExtendedListResponse, msg.session->sessionFlags, msg.header->session, msg.header->key);
-		reply->writeU8(index);						// packet index
-		reply->writeU8(msg.session->packTotal);		// total packets
+		reply->writeU16(index);						// packet index
+		reply->writeU16(msg.session->packTotal);		// total packets
 		reply->writeBytes(resultPacket.data, resultPacket.size);
 	}
 

@@ -725,6 +725,12 @@ void MasterdCore::InitPrefs(void)
 		{	CONFIG_TYPE_U32,	&m_Prefs.challengeMode,		"challengeMode",
 			"Enable challenges for user sessions\n"
 		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.maxServersInResponse,		"maxServersInResponse",
+			"Set max servers in response (will be additionally restricted by packet limit)\n"
+		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.maxPacketsInResponse,		"maxServersInResponse",
+			"Set max packets in response\n"
+		},
 
 		{ CONFIG_TYPE_NOTSET, NULL, NULL } // End of entities
 	};

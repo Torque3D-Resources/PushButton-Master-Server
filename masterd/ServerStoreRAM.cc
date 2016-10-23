@@ -23,6 +23,7 @@
 #include "masterd.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <algorithm>
 
 
 // Trick to allow conditional compilation of sqlite.
@@ -431,6 +432,9 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 	std::vector<ServerAddress*> totalResults;
 	ListPacketBuilder packetBuilder;
 
+	U32 maxServerPackets = std::min(session->sessionFlags & Session::NewStyleResponse ? 65534 : 254, (int)gm_pConfig->maxPacketsInResponse);
+	U32 maxServerResults = gm_pConfig->maxServersInResponse;
+
 	debugPrintf(DPRINT_VERBOSE, "Query for Game:\"%s\", Mission:\"%s\"\n",
 				filter->gameType, filter->missionType);
 	debugPrintf(DPRINT_DEBUG, " Players Min/Max(Bots) %hhu/%hhu(%hhu), CPU >= %hu MHz, Version >= %u, Regions 0x%08x, Flags 0x%08x\n",
@@ -618,6 +622,8 @@ void ServerStoreRAM::QueryServers(Session *session, ServerFilter *filter)
 
 		// server passed the filter test, add it to the list
 		totalResults.push_back(&info->addr);
+		if (totalResults.size() >= maxServerResults)
+			break;
 	}
 
 SkipFilterTests:
@@ -633,9 +639,10 @@ SkipFilterTests:
 		if (!packetBuilder.addServerAddress(addAddress))
 		{
 			// Limit results index to 255, as its impossible to return more packets than this (as packetIndex 255 == reset)
-			if (session->results.size() >= 254)
+			if (session->results.size() >= maxServerPackets)
 			{
 				debugPrintf(DPRINT_DEBUG, "  Filter warning: too many results, clipping packets.\n");
+				totalResults.resize(i);
 				break;
 			}
 

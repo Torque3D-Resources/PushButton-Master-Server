@@ -46,9 +46,9 @@
 #define PACKET_HEADER_SIZE  8
 
 /**
- * @brief Size of packet header (protocol-dependent)
+ * @brief Size of packet header (protocol-dependent, worst case)
  */
-#define LIST_PACKET_HEADER		(PACKET_HEADER_SIZE + 10)
+#define LIST_PACKET_HEADER		(PACKET_HEADER_SIZE + 12)
 
 // space remaining after packet header
 #define PACKET_PAYLOAD_SIZE	(MAX_PACKET_SIZE - PACKET_HEADER_SIZE)

@@ -125,6 +125,9 @@ struct tDaemonConfig
 	U32		testingMode;
 	U32		challengeMode;	// Enable session challenges
 
+	U32		maxServersInResponse;
+	U32		maxPacketsInResponse;
+
 	void reset()
 	{
 		file[0] = '\0';
@@ -150,6 +153,9 @@ struct tDaemonConfig
 
 		testingMode = 0;
 		challengeMode = 0;
+
+		maxServersInResponse = 65534;
+		maxPacketsInResponse = 254;
 	}
 
 	~tDaemonConfig()
