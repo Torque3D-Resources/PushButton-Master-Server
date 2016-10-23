@@ -27,11 +27,8 @@
 #include "commonTypes.h"
 #include "packetconf.h"
 
-// expire the game client query session after 15 seconds since last activity
-#define SESSION_EXPIRE_TIME		15
-
-// maximum number of sessions per peer / remote host at the same time
-#define SESSION_MAX				10
+// absolute maximum number of sessions per peer / remote host at the same time
+#define SESSION_ABSOLUTE_MAX				10
 
 struct ServerResultPacket
 {

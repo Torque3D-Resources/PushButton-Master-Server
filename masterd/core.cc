@@ -731,6 +731,12 @@ void MasterdCore::InitPrefs(void)
 		{	CONFIG_TYPE_U32,	&m_Prefs.maxPacketsInResponse,		"maxServersInResponse",
 			"Set max packets in response\n"
 		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.maxSessionsPerPeer,		"maxSessionsPerPeer",
+			"Set max sessions per peer\n"
+		},
+		{	CONFIG_TYPE_U32,	&m_Prefs.sessionTimeoutSeconds,		"sessionTimeoutSeconds",
+			"Set seconds required for a session to expire\n"
+		},
 
 		{ CONFIG_TYPE_NOTSET, NULL, NULL } // End of entities
 	};
@@ -919,6 +925,8 @@ SkipToNext:
 		m_Prefs.heartbeat = 3600;
 	if(m_Prefs.verbosity >= DPRINT__COUNT) // we only have so many verbosity levels
 		m_Prefs.verbosity = DPRINT__COUNT -1;
+	if (m_Prefs.maxSessionsPerPeer > SESSION_ABSOLUTE_MAX)
+		m_Prefs.maxSessionsPerPeer = SESSION_ABSOLUTE_MAX;
 
 	// report success
 	debugPrintf(DPRINT_INFO, " - Preference file loaded.\n");

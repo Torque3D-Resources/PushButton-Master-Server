@@ -128,6 +128,9 @@ struct tDaemonConfig
 	U32		maxServersInResponse;
 	U32		maxPacketsInResponse;
 
+	U32		maxSessionsPerPeer;
+	U32		sessionTimeoutSeconds;
+
 	void reset()
 	{
 		file[0] = '\0';
@@ -156,6 +159,9 @@ struct tDaemonConfig
 
 		maxServersInResponse = 65534;
 		maxPacketsInResponse = 254;
+
+		maxSessionsPerPeer = 10;
+		sessionTimeoutSeconds = 15;
 	}
 
 	~tDaemonConfig()

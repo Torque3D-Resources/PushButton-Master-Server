@@ -142,6 +142,7 @@ void FloodControl::CheckSessions(tPeerRecord *peerrec, bool forceExpire)
 	tcSessionList::iterator	it, next;
 	Session					*ps;
 	time_t					ts;
+	U32						sessionExpireTime = gm_pConfig->sessionTimeoutSeconds;
 
 	// get current timestamp
 	ts = getAbsTime();
@@ -159,7 +160,7 @@ void FloodControl::CheckSessions(tPeerRecord *peerrec, bool forceExpire)
 		}
 
 		// move on to next session if current one hasn't expired yet
-		if(ps->tsLastUsed + SESSION_EXPIRE_TIME > ts)
+		if(ps->tsLastUsed + sessionExpireTime > ts)
 		{
 			it++;
 			continue;
@@ -370,7 +371,7 @@ void FloodControl::RepPeer(tPeerRecord *peerrec, S32 tickets)
 void FloodControl::CreateSession(tPeerRecord *peerrec, tPacketHeader *header, Session **session)
 {	
 	// don't allow more than SESSION_MAX sessions at the same time
-	if(peerrec->sessions.size() >= SESSION_MAX)
+	if(peerrec->sessions.size() >= gm_pConfig->maxSessionsPerPeer)
 	{
 		debugPrintf(DPRINT_DEBUG, "SESSION MAX EXCEEDED!!!!!!!!!!\n");
 		*session = NULL;
@@ -465,11 +466,13 @@ void FloodControl::SendAuthenticationChallenge(tMessageSession &msg)
 
 	sessionInstance->sessionFlags |= Session::AuthenticatedSession | Session::NewStyleResponse;
 
-	U32 sessionKeys[SESSION_MAX];
+	U32 sessionKeys[SESSION_ABSOLUTE_MAX];
 	U32 numSessions = 0;
 	for (tcSessionList::iterator itr = peerrec->sessions.begin(), end = peerrec->sessions.end(); itr != end; itr++)
 	{
 		sessionKeys[numSessions++] = (*itr)->authSession;
+		if (numSessions >= SESSION_ABSOLUTE_MAX)
+			break;
 	}
 
 	U32 authSession;
