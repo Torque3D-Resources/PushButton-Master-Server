@@ -308,6 +308,7 @@ bool handleInfoRequest(tMessageSession &msg)
 bool handleInfoResponse(tMessageSession &msg)
 {
 	ServerInfo info;
+	Session* ps = NULL;
 
 	/*
 
@@ -327,6 +328,19 @@ bool handleInfoResponse(tMessageSession &msg)
 	U32		playersGuiList[numPlayers];
 
 	*/
+
+	if (gm_pConfig->challengeMode)
+	{
+		if (!handlePacketAuthentication(msg, &ps, false))
+		{
+			if(checkLogLevel(DPRINT_DEBUG))
+			{
+				printf(" No such session exists, ignoring info update.\n");
+			}
+			
+			return true;
+		}
+	}
 	
 	info.addr			= *msg.addr;
 	info.session		= msg.header->session;
