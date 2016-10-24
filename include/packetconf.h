@@ -42,8 +42,8 @@
  */
 #define LIST_PACKET_SIZE		MAX_PACKET_SIZE
 
-// packet's header size in bytes (note: this is for the worst case new packet style)
-#define PACKET_HEADER_SIZE  8
+// packet's header size in bytes
+#define PACKET_HEADER_SIZE  6
 
 /**
  * @brief Size of packet header (protocol-dependent, worst case)

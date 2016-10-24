@@ -252,7 +252,7 @@ class ServerInfo
 {
 public:
 	ServerAddress	addr;
-	U32				session;
+	U16				session;
 	U16				key;
 	U32				authSession;
 

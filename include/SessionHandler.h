@@ -53,20 +53,19 @@ public:
 		AuthenticatedSession = 1<<3, // Any dispatched tokens are authenticated
 	};
 
-
-	U32						session;			// associated session identifier
 	U32						authSession;	// Authenticated session key
 
 	time_t					tsLastUsed;		// last time this session was used
 
 	tcServerAddrVector	results;			// associated server query results
 
+	U16						session;			// associated session identifier
 	U16						total;			// total number of servers
 	U16						packTotal;		// total number of packets
 
 	U8 sessionFlags;							// flags for session transmission data
 
-	Session(U32 session, U8 flags)
+	Session(U16 session, U8 flags)
 	{
 //		printf("DEBUG: session object born: %X\n", this);
 		

@@ -198,18 +198,17 @@ void Packet::writeHeader(U8 type, U8 flags, U32 session, U16 key)
 	writeU8( type);		// packet type
 	writeU8( flags);	// flags
 
-	if (flags & Session::NewStyleResponse)
+	if (flags & Session::AuthenticatedSession)
 	{
-		//printf("WROTE NEW STYLE HEADER %u\n", flags);
+		//printf("WROTE AUTHENTICATED HEADER %u\n", flags);
 		writeU32(session);
 	}
 	else
 	{
-		//printf("WROTE OLD STYLE HEADER %u\n", flags);
+		//printf("WROTE AUTHENTICATED HEADER %u\n", flags);
 		writeU16(session);	// session
+		writeU16(key);		// key
 	}
-
-	writeU16(key);		// key
 }
 
 /**
@@ -220,16 +219,16 @@ void Packet::readHeader(U8 &type, U8 &flags, U32 &session, U16 &key)
 	type	= readU8();		// packet type
 	flags	= readU8();		// flags
 
-	if (flags & Session::NewStyleResponse)	// session
+	if (flags & Session::AuthenticatedSession)	// session
 	{
 		session = readU32();
+		key = 0;
 	}
 	else
 	{
 		session = readU16();
+		key	  = readU16();	// key
 	}
-
-	key		= readU16();	// key
 }
 
 

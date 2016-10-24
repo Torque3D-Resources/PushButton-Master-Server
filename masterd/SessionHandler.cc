@@ -506,8 +506,9 @@ void FloodControl::SendAuthenticationChallenge(tMessageSession &msg)
 	}
 
 	// Prep and send packet
-	reply->writeHeader(MasterServerChallenge, sessionInstance->sessionFlags, sessionInstance->session, msg.header->key);
-	reply->writeU32(sessionInstance->authSession);
+	reply->writeHeader(MasterServerChallenge, sessionInstance->sessionFlags, sessionInstance->authSession, msg.header->key);
+	reply->writeU16(sessionInstance->session);
+	reply->writeU16(msg.header->key);
 
 	gm_pTransport->sendPacket(reply, &peerrec->peer);
 	delete reply;

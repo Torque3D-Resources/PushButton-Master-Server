@@ -104,7 +104,7 @@ bool handleListRequest(tMessageSession &msg)
 	int				i;
 	char			buffer[256];
 	bool isNewStyleResponse = msg.header->flags & Session::NewStyleResponse;
-	bool resendPacket = (isNewStyleResponse) ? (index == 65534) : (index == 255);
+	bool resendPacket = (isNewStyleResponse) ? (index == 65535) : (index == 255);
 
 	
 	/*
