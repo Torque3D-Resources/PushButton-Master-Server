@@ -49,6 +49,7 @@
 #define MasterServerInfoResponse        26
 #define MasterServerExtendedListResponse 40 // jamesu - packet which stores IPV6 data too
 #define MasterServerChallenge           42 // jamesu - challenge packet
+#define MasterServerExtendedListRequest 44 // jamesu - improved MasterServerListRequest
 
 // Legend:
 //   * -- Implemented for Receive

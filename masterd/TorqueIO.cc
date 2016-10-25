@@ -103,8 +103,8 @@ bool handleListRequest(tMessageSession &msg)
 	U8				responseType;
 	int				i;
 	char			buffer[256];
-	bool isNewStyleResponse = msg.header->flags & Session::NewStyleResponse;
-	bool resendPacket = (isNewStyleResponse) ? (index == 65535) : (index == 255);
+	bool isExtendedRequest = msg.header->type == MasterServerExtendedListRequest;
+	bool resendPacket = (isExtendedRequest) ? (index == 65535) : (index == 255);
 
 	
 	/*
@@ -131,7 +131,7 @@ bool handleListRequest(tMessageSession &msg)
 	/***********************************
 	 List Query packet
 	***********************************/
-	index = isNewStyleResponse ? msg.pack->readU16() : msg.pack->readU8();
+	index = isExtendedRequest ? msg.pack->readU16() : msg.pack->readU8();
 
 	if(checkLogLevel(DPRINT_VERBOSE))
 	{
@@ -141,6 +141,12 @@ bool handleListRequest(tMessageSession &msg)
 		else
 			printf("Received list resend request from %s\n", buffer);
 		printf(" [F: %X, S: %X, K: %u, I: %X]\n", msg.header->flags, msg.header->session, msg.header->key, index);
+	}
+
+	// Need to ensure the newstyle flag is set if we are using the extended request
+	if (isExtendedRequest)
+	{
+		msg.header->flags |= Session::NewStyleResponse;
 	}
 
 //	printf(" dumping request packet..\n");

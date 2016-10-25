@@ -585,6 +585,7 @@ BadRepPeer:
 		}
 
 		case MasterServerListRequest:
+		case MasterServerExtendedListRequest:
 		{
 			debugPrintf(DPRINT_VERBOSE, "Received MasterServerListRequest\n");
 			result = handleListRequest(message);
